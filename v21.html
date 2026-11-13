@@ -646,7 +646,7 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
 <!-- BARRA DE HERRAMIENTAS desplegable (tocar el usuario): 🤖 ritmo automatico, 🗣️ Don Tortu, 🎙️B narrador B (lee el chat), 🔊 efectos, 📊 estadisticas, ↺ reiniciar copas, 🔄 refrescar -->
 <div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">cluss</span><button class="sm" id="bLang" type="button" aria-label="Idioma / Language" title="Idioma / Language">EN</button><button class="sm on" id="bVoz" aria-pressed="true" aria-label="Narrador Don Tortu (V)" title="Narrador Don Tortu (V)">🗣️</button><button class="sm on" id="bVozB" aria-pressed="true" aria-label="Narrador B: lee comentarios del chat" title="Narrador B: lee comentarios del chat">🎙️B</button><button class="sm on" id="bSfx" aria-pressed="true" aria-label="Efectos de sonido (S)">🔊</button><button class="sm" id="bStat" aria-label="Estadísticas de torneos" title="Estadísticas de torneos">📊</button><button class="sm" id="bReset" aria-label="Reiniciar copas (tocar dos veces)" title="Reiniciar copas (tocar dos veces)">↺</button><button class="sm" id="bTurboDn" aria-label="Bajar el límite de taps del turbo en 100" title="Turbo: 100 taps menos">➖</button><button class="sm" id="bTurboUp" aria-label="Subir el límite de taps del turbo en 100" title="Turbo: 100 taps más">➕</button><button class="sm" id="bRefresh" aria-label="Refrescar página" title="Refrescar página">🔄</button><span class="version" aria-label="Límite de taps del turbo y versión 1.2.2"><span id="turboLim">⚡ Límite 50 taps</span> · v1.2.2</span></div>
 <!-- FRANJA DE ESTADISTICAS del live: solo eventos REALES (los bots y los toques manuales no cuentan). El contador de regalos es solo informativo -->
-<div class="evs" id="evs" role="status" aria-label="Estadisticas del live"><div class="st" data-k="member" title="Unidos"><b>👥</b><span>0</span></div><div class="st" data-k="chat" title="Comentarios"><b>💬</b><span>0</span></div><div class="st" data-k="gift" title="Regalos"><b>🎁</b><span>0</span></div><div class="st" data-k="like" title="Me gusta"><b>❤️</b><span>0</span></div><div class="st" data-k="follow" title="Seguidores nuevos"><b>➕</b><span>0</span></div><div class="st" data-k="share" title="Compartidos"><b>↗️</b><span>0</span></div></div>
+<div class="evs" id="evs" role="status" aria-label="Estadisticas del live"><div class="st" data-k="member" title="Unidos"><b>👥</b><span>0</span></div><div class="st" data-k="chat" title="Comentarios"><b>💬</b><span>0</span></div><div class="st" data-k="like" title="Me gusta"><b>❤️</b><span>0</span></div><div class="st" data-k="follow" title="Seguidores nuevos"><b>➕</b><span>0</span></div><div class="st" data-k="share" title="Compartidos"><b>↗️</b><span>0</span></div></div>
 <div id="giftTotal" role="status" aria-label="Regalos recibidos: 0">0</div>
 <div id="toast" role="status" aria-live="polite"></div>
 <!-- PANEL DE ESTADISTICAS (📊/🌎): contiene nombres y comentarios reales; cerrarlo antes de mostrar pantalla -->
@@ -987,7 +987,7 @@ const ST_VIEWS={
  paises(){const c=Object.values(DB.countries).map(v=>({flag:v.flag,name:v.name,mentions:v.mentions,users:v.users.length})).sort((a,b)=>b.mentions-a.mentions);
   const items=c.slice(0,8).map(x=>({l:x.flag+' '+x.name,v:x.mentions})),rest=c.slice(8).reduce((a,x)=>a+x.mentions,0);if(rest)items.push({l:'Otros',v:rest});
   return stPie(items)+(c.length?`<table><tr><th></th><th>Club</th><th>Menciones</th><th>Personas</th></tr>${c.map((x,i)=>`<tr><td style="color:${ST_COL[Math.min(i,8)]}">●</td><td>${x.flag} ${stH(x.name)}</td><td>${x.mentions}</td><td>${x.users}</td></tr>`).join('')}</table><p class="mut">Cada comentario que nombra un club suma 1.</p>`:'')},
- usuarios(){const IC={chat:'💬',like:'❤️',gift:'🎁',follow:'➕',share:'↗️',member:'👋'},NM={chat:'comentó',like:'likes',gift:'regalo',follow:'siguió',share:'compartió',member:'se unió'};
+ usuarios(){const IC={chat:'💬',like:'❤️',gift:'🎁',follow:'➕',share:'↗️',member:'👋'},NM={chat:'comentó',like:'likes',gift:'envió',follow:'siguió',share:'compartió',member:'se unió'};
   const l=Object.values(DB.users).sort((a,b)=>b.last-a.last);
   return l.length?l.map(u=>{const t=picks.get(u.name.toLowerCase());return`<details data-u="${stH(u.name.toLowerCase())}"><summary><b>${stH(u.name)}</b> <span class="mut">${t!=null&&T[t]?T[t].n+' · ':''}${u.ev.length} eventos · ${stTm(u.last)}</span></summary><div class="ue"></div></details>`}).join(''):'<p class="mut">Todavía no hay usuarios registrados.</p>'},
  regalos(){const g=[...DB.gifts].reverse();
@@ -1020,8 +1020,8 @@ document.addEventListener('click',e=>{ /* eventos del panel (delegados) */
 /* historial completo de un usuario: se dibuja solo al abrir su fila (mas reciente primero) */
 document.addEventListener('toggle',e=>{const d=e.target;if(!d.matches||!d.matches('#stp details[data-u]')||!d.open)return;
  const u=DB.users[d.dataset.u],box=d.querySelector('.ue');if(!u||!box)return;
- const IC={chat:'💬',like:'❤️',gift:'🎁',follow:'➕',share:'↗️',member:'👋'},NM={chat:'comentó',like:'likes',gift:'regalo',follow:'siguió',share:'compartió',member:'se unió'};
- box.innerHTML='<table>'+[...u.ev].reverse().map(r=>`<tr><td>${stFd(r.t)}</td><td>${IC[r.type]||''} ${NM[r.type]||r.type}${r.n>1?' x'+r.n:''}${r.gift?' '+stH(r.gift):''}</td><td>${r.text?'"'+stH(r.text)+'"':''}</td></tr>`).join('')+'</table>';
+ const IC={chat:'💬',like:'❤️',gift:'🎁',follow:'➕',share:'↗️',member:'👋'},NM={chat:'comentó',like:'likes',gift:'envió',follow:'siguió',share:'compartió',member:'se unió'};
+ box.innerHTML='<table>'+[...u.ev].reverse().map(r=>`<tr><td>${stFd(r.t)}</td><td>${IC[r.type]||''} ${NM[r.type]||r.type}${r.n>1?' x'+r.n:''}${r.gift?' '+stH(r.gift):(r.type==='gift'?' un regalo':'')}</td><td>${r.text?'"'+stH(r.text)+'"':''}</td></tr>`).join('')+'</table>';
 },true);
 addEventListener('keydown',e=>{if(e.key==='Escape')stClose()});
 const PTS={share:5*HARD, /* compartir = 5 rayos */chat:10*HARD, /* comentar = 10 rayos */like:1*HARD,follow:3*HARD,gift:GIFT_PROGRESS}; /* puntos usados por los eventos automaticos del bot */
@@ -1638,11 +1638,13 @@ const HINCHAS_JSON=[ /* editar aqui. Formato: {username:'maria_ol', avatar:'http
 let HEART_N=50,heartLimitOffset=0; /* todas las carreras arrancan con 50 taps */
 /* NIVEL: sube 1 cada vez que el limite de taps aumenta (record de la carrera). Voz: "Subiste a nivel N". Se muestra junto al menu (boton cluss). Se reinicia en cada carrera. */
 let tapLevel=1,tapLevelMaxN=50;
+/* LIMITE DE TAPS por recorrido: sube de a 50 por nivel (Nv1=50 ... Nv20=1000, tope 1000) hasta el 50% del recorrido; desde el 50% BAJA de a 50 (multiplos de 50) hasta el minimo de 50 al final. Un paso cada LEVEL_PROGRESS_STEP % de avance (2.5% => 20 pasos de subida en 0-50% y 20 de bajada en 50-100%). El Nv de la insignia conserva el maximo alcanzado. */
+const LEVEL_TAPS=50,LEVEL_MAX_TAPS=1000,LEVEL_PROGRESS_STEP=2.5,LEVEL_DESCENT_FROM=50;
 const lvBadge=document.createElement('span');lvBadge.id='nivelBadge';lvBadge.setAttribute('role','status');
 document.getElementById('connection').after(lvBadge);
 function paintLevel(){lvBadge.textContent='Nv '+tapLevel;lvBadge.setAttribute('aria-label','Nivel '+tapLevel)}
 function levelUp(){
- tapLevel++;paintLevel();lvBadge.classList.remove('up');void lvBadge.offsetWidth;lvBadge.classList.add('up');
+ tapLevel=Math.max(1,Math.round(HEART_N/LEVEL_TAPS));paintLevel();lvBadge.classList.remove('up');void lvBadge.offsetWidth;lvBadge.classList.add('up');
  const txt='Subiste a nivel '+tapLevel;
  try{toast(txt,'🆙')}catch(e){}
  try{A.sfx('lvl')}catch(e){}
@@ -1657,11 +1659,16 @@ function heartLimitStep(){
  return clubStep+(finalRound?100:0)+activityStep;
 }
 function syncHeartLimit(){
- const progress=Math.max(0,...S.map(s=>Math.min(100,s.p))),n=Math.max(50,50+Math.floor(progress/10)*heartLimitStep()+heartLimitOffset);
+ const progress=Math.max(0,...S.map(s=>Math.min(100,s.p))),base0=progress<LEVEL_DESCENT_FROM?LEVEL_TAPS*(1+Math.floor(progress/LEVEL_PROGRESS_STEP)):LEVEL_MAX_TAPS-LEVEL_TAPS*(1+Math.floor((progress-LEVEL_DESCENT_FROM)/LEVEL_PROGRESS_STEP)),
+  base=Math.max(LEVEL_TAPS,Math.min(LEVEL_MAX_TAPS,base0)),
+  n=Math.min(LEVEL_MAX_TAPS,Math.max(LEVEL_TAPS,base+heartLimitOffset));
+ heartLimitOffset=n-base; /* si el ➕/➖ choca con el minimo o el tope de 1000, el ajuste no se acumula */
  if(n===HEART_N)return;
- HEART_N=Math.min(10000,n);
+ const prevN=HEART_N;HEART_N=n;
  T.forEach((_,i)=>renderHeart(i));
  if(HEART_N>tapLevelMaxN){tapLevelMaxN=HEART_N;levelUp()}
+ /* al bajar el limite, un contador que ya lo alcanzo completa y activa su turbo (fuera de update() para no anidarlo) */
+ if(n<prevN)setTimeout(()=>T.forEach((_,i)=>{if(heart[i]>=HEART_N&&!over){heart[i]=HEART_N-1;heartAdd(i,1)}}),0);
 }
 window.syncHeartLimit=syncHeartLimit;
 /* Dibuja el corazon (barra de likes) del equipo t. */
@@ -1744,6 +1751,8 @@ function renderNest(t){ /* redibuja el nido del equipo t desde recent[t] */
 /* Marca VIP (aro dorado) al fan que llego a un nivel de likes */
 function markVip(k){recent.forEach((l,t)=>{const x=l.find(y=>y.key===k);if(x){x.vip=true;renderNest(t)}})}
 T.forEach((_,i)=>renderNest(i));
+/* nombre del regalo tal como lo informa TikTok (vacio si no lo trae) */
+function giftLabel(e){return String((e&&(e.giftName||e.gift_name||(e.gift&&e.gift.name)||(typeof e.gift==='string'?e.gift:'')))||'').replace(/\s+/g,' ').trim().slice(0,30)}
 const EI={chat:['💬','#8b8f99'],like:['❤️','#ff5a7a'],follow:['➕','#2f9bd6'],share:['↗️','#2f9bd6'],gift:['🎁','#e11d48'],member:['👋','#16a34a']},evT=[],evL=[];
 $('.board').insertAdjacentHTML('beforeend','<div class="ev" id="evg" hidden></div>'); /* alerta de quien se une sin equipo: avatar grande al centro */
 /* PUNTAJE POR USUARIO: cada evento real lo aumenta. */
@@ -1768,7 +1777,7 @@ function showEv(t,type,n,u,sc){
  }
  avatar.title = info && info.name ? '@'+info.name : '';
  el.append(avatar);
- const ic=document.createElement('b');ic.className='eb';ic.textContent=d[0]+((type==='like'||type==='gift')&&n>1?' x'+n:'');
+ const ic=document.createElement('b');ic.className='eb';ic.textContent=d[0]+(type==='gift'&&info&&info.gift?' '+info.gift:'')+((type==='like'||type==='gift')&&n>1?' x'+n:'');
  el.append(ic);
  el.classList.toggle('top',(S[t]?Math.min(100,S[t].p):0)<50);el.style.setProperty('--c',d[1]);el.hidden=false;el.style.animation='none';void el.offsetWidth;el.style.animation='';
  clearTimeout(evT[t]);clearTimeout(evL[t]);
@@ -1803,7 +1812,7 @@ function avatar(e){
  recent[t].unshift({key:k,name:u,url:url||(old&&old.url)||'',vip:!!(old&&old.vip)});
  known.set(k,{key:k,name:u,url:url||(known.get(k)&&known.get(k).url)||'',t});
  trimNest(t);
- showEv(t,e.type,e.activityCount,{key:k,name:u,url:url||''}); /* alerta con avatar del usuario real */
+ showEv(t,e.type,e.activityCount,{key:k,name:u,url:url||'',gift:e.type==='gift'?giftLabel(e):''}); /* alerta con avatar del usuario real */
  renderNest(t);if(from>=0&&from!==t)renderNest(from);
  renderPod(t);if(from>=0&&from!==t)renderPod(from);
 }
@@ -2092,7 +2101,8 @@ function greet(u,t,alias){
 /* Don Tortu agradece cada regalo real y anuncia su avance y turbo. Cola corta para que no se pisen las voces. */
 const giftQueue=[];let giftSpeaking=false;
 function giftThanksText(g){
- const thank=g.count===1?'por tu regalo':'por tus '+g.count+' regalos';
+ const en=!!(window.I18N&&window.I18N.en);
+ const thank=g.gift?(en?'for sending ':'por enviar ')+(g.count>1?g.count+' ':'')+g.gift:(g.count===1?'por tu regalo':'por tus '+g.count+' regalos');
  const turbo=g.t>=0&&T[g.t]?' ¡'+cap(T[g.t].n)+' entró en modo turbo!':'';
  return'¡Gracias '+g.name+' '+thank+'!'+turbo;
 }
@@ -2105,10 +2115,10 @@ function speakNextGift(){
  if(giftQueue.length)setTimeout(speakNextGift,0);
 }
 /* El agradecimiento de un regalo interrumpe cualquier otra voz y se procesa antes que el resto. */
-function giftThanks(name,t,count=1){
+function giftThanks(name,t,count=1,gift=''){
  const amount=Math.max(1,Math.floor(Number(count))||1),last=giftQueue[giftQueue.length-1];
- if(last&&last.name===name&&last.t===t)last.count+=amount;
- else giftQueue.push({name,t,count:amount});
+ if(last&&last.name===name&&last.t===t&&last.gift===gift)last.count+=amount;
+ else giftQueue.push({name,t,count:amount,gift});
  speakNextGift();
 }
 /* Avisos y logros de acciones reales; el avance y el turbo vienen solo del contador. */
@@ -2116,10 +2126,12 @@ function perks(e){
  if(!e)return;
  const u=String(e.username||'').trim();if(!u)return;
  if(e.type==='gift'){
-  toast('@'+u+' · ¡gracias!','🎁');A.sfx('gift');
+  const gc=Math.max(1,Math.floor(Number(e.activityCount))||1),gl=giftLabel(e),en=!!(window.I18N&&window.I18N.en);
+  const que=gl?(gc>1?gc+'× ':'')+gl:(en?'a gift':'un regalo'); /* siempre: quien + envio + QUE regalo */
+  toast('@'+u+(en?' sent ':' envió ')+que,'🎁');A.sfx('gift');
   const t=recentChatTeam(u.toLowerCase());
-  if(!over&&t>=0&&T[t])hype('🎁','@'+u,' · +10% y turbo para '+T[t].n,T[t].c);
-  giftThanks(String(e.displayName||u).replace(/[_.]+/g,' '),(!over&&t>=0&&T[t])?t:-1,n);
+  if(!over&&t>=0&&T[t])hype('🎁','@'+u,(en?' sent ':' envió ')+que+' · +10% '+(en?'and turbo for ':'y turbo para ')+T[t].n,T[t].c);
+  giftThanks(String(e.displayName||u).replace(/[_.]+/g,' '),(!over&&t>=0&&T[t])?t:-1,gc,gl);
   return;
  }
  if(over)return;
@@ -2145,12 +2157,11 @@ function perks(e){
   if(P.vo)speak(greeting,null,false);
  }
 }
-/* ===== VOZ EN OFF: explica la dinamica y presenta pedidos de interaccion escalonados ===== */
+/* ===== VOZ EN OFF: aviso inicial y narracion de carrera ===== */
 const SS=window.speechSynthesis;
 if(P.vo===undefined)P.vo=1;
 if(P.vb===undefined)P.vb=1; /* narrador B (lector de chat): su propio boton; no se fuerza por ronda */
-let voices=[],vT0=performance.now(),vLast=-1e9,vRound=0,nxLast=-1e9,giftTurboReminderAt=performance.now();const vDone=new Set(),vSess=new Set(); /* vDone: por ronda · vSess: por sesion (pedidos de interaccion, una sola vez) */
-const GIFT_TURBO_REMINDER_MS=5*60*1000;
+let voices=[],vT0=performance.now(),vLast=-1e9,vRound=0,nxLast=-1e9;const vDone=new Set(),vSess=new Set(); /* vDone: por ronda · vSess: por sesion (pedidos de interaccion, una sola vez) */
 const loadV=()=>{try{voices=SS.getVoices()||[]}catch(e){}};
 if(SS){loadV();SS.onvoiceschanged=loadV}
 const FEMALE_VOICE=/female|woman|femin|mujer|helena|hilda|laura|luc[ií]a|m[oó]nica|paulina|sabina|isabela|ximena|sof[ií]a|elena|carmen|dalia|elvira|salom[eé]|paloma|camila|catalina|lorena|marina/i;
@@ -2250,12 +2261,9 @@ say=function(t){
  if(!over&&P.vo&&/toma la delantera/.test(t)&&performance.now()-vLast>8000)
   speak(t.replace(/\s*\+\d+/,'').replace(/[A-ZÁÉÍÓÚÑ]{3,}/g,w=>w[0]+w.slice(1).toLowerCase()),null,false);
 };
-/* Guiones de voz de bienvenida. */
-const dinamicaTxt=()=>'Bienvenidos al duelo '+cap(T[0].n)+' contra '+cap(T[1].n)+'. Aquí cada hincha cuenta: escribe el nombre de tu equipo para apoyar a tu equipo. ¡Gana el primero que llegue a la meta!';
-const dinamicaTxt_old=()=>'Bienvenidos a la carrera de tortugas, '+cap(T[0].n)+' contra '+cap(T[1].n)+'. Escribe en el chat el nombre de tu equipo para jugar; si escribes el equipo contrario, cambias de equipo. Cada interaccion suma taps al contador de tu equipo. Al completar el contador se activa el turbo; los regalos reales avanzan 10% y activan 15 segundos de turbo. ¡Gana el primero que llegue a la meta!';
+/* Aviso de voz al iniciar cada carrera. */
 const VL=[
- {id:'intro',at:2,s:'Así se juega: tu equipo en el chat.',v:[dinamicaTxt]},
- {id:'tap',once:true,at:55,s:'Contador tap tap',v:['Los eventos suman taps con distintos pesos y activan el turbo al completar el contador. Cada regalo da 10% y un turbo de 15 segundos que reparte 6% en total.','Cada evento carga el contador y, al completarlo, activa turbo. Cada regalo da 10% y un turbo de 15 segundos con 6% en total.']},
+ {id:'intro',at:2,s:'Rositas activan el turbo',v:[()=>'Si envían rositas, se activa el turbo para que tu equipo llegue más rápido.']},
 ];
 const VF=['¡Recta final! Todo se decide ahora. ¡Vamos, tortugas!','¡Llegando a la meta! ¡Qué emoción, esto está parejísimo!'];
 const VW=['¡Ganó {n}! Gracias por jugar y alentar. En unos segundos arranca otra ronda, ¡te esperamos!','¡Tenemos campeón: {n}! Gracias por estar. Ya viene una nueva carrera.'];
@@ -2264,8 +2272,6 @@ const ENGAGEMENT_CALLS={
  50:'Para activar el modo turbo, envía una rosita real. Los regalos reales también avanzan la pista.',
  75:'Para ganar este partido, envía una Pistola de dinero a tu equipo.',
 };
-VL[0].s='Inicio de carrera';VL[0].v=[()=>'Bienvenidos al duelo '+cap(T[0].n)+' contra '+cap(T[1].n)+'. Aquí cada hincha cuenta: escribe el nombre de tu equipo para apoyar a tu equipo. ¡Gana el primero que llegue a la meta!'];VL[0].v_old=[()=>'Bienvenidos a '+cap(T[0].n)+' contra '+cap(T[1].n)+'. Cada interaccion carga el contador del equipo; al completarlo, activa el turbo. Los regalos reales avanzan la pista y activan turbo. ¡Gana quien llegue primero a la meta!'];
-VL[1].s='Contador';VL[1].v=['Cada hincha que escribe su equipo hace avanzar a su tortuga.','Escribe el nombre de tu equipo en el chat para apoyarlo.'];
 /* Entrega un pedido a la vez, en orden, aunque el avance salte varios hitos. */
 function nextEngagementCall(progress,done){
  const percent=ENGAGEMENT_AT.find(value=>Math.max(...progress)>=value&&!done.has('engagement'+value));
@@ -2280,11 +2286,6 @@ setInterval(()=>{
  if(over)return;const now=performance.now(),el=(now-vT0)/1000;
  if(sprint&&!vDone.has('final')){vDone.add('final');speak(VF[vRound%VF.length],'¡Recta final!',true);return}
  const progress=Math.max(...S.map(x=>x.p));
- if(!sprint&&!vDone.has('final')&&P.vo&&SS&&progress>50&&tapLevel>=4&&now-giftTurboReminderAt>=GIFT_TURBO_REMINDER_MS){
-  if(!narratorQueue.some(item=>item.intro)&&now-vLast>=5000&&!SS.speaking&&!SS.pending&&speak('Enviar un regalo a tu equipo activa el modo turbo y le ayuda a llegar más rápido a la meta.',null,false)){
-   giftTurboReminderAt=now;return
-  }
- }
  const call=nextEngagementCall(S.map(x=>x.p),vDone);
  if(call){
   const key='engagement'+call.percent;
@@ -3525,20 +3526,24 @@ const ref=side.querySelector('.bub')||side.firstChild;side.insertBefore(box,ref)
 const pd=box.querySelector('#hnPd');
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const MED=['🥇','🥈','🥉'];
-let C=new Map(),hit='';
+let C=new Map(),hit='',last=''; /* HONOR: solo se muestra el ULTIMO usuario que envio un regalo; si otro envia, lo reemplaza */
 const av=(url,i)=>/^https:/.test(url||'')?`<img class="av" alt="" src="${esc(url)}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'av',textContent:'💛'}))">`:`<div class="av">${MED[i]}</div>`;
-function pinta(){const a=[...C.entries()].sort((x,y)=>y[1].n-x[1].n).slice(0,3);
- pd.innerHTML=[0,1,2].map(i=>{const e=a[i];return e?`<div class="sl s${i+1}${e[0]===hit?' hit':''}">${i===0?'<span class="cr">👑</span>':''}${av(e[1].url,i)}<div class="tx"><span class="un">@${esc(e[0])}</span><span class="ct">×${e[1].n}</span></div></div>`:`<div class="sl s${i+1} vac">${av('',i)}<div class="tx"><span class="un">—</span></div></div>`}).join('')}
+const rango=n=>n>=10?['👑 LEYENDA','#ff4d6d']:n>=3?['🔥 FANÁTICO','#ff9a1f']:['⭐ HINCHA','#ffd34d'];
+function pinta(){const e=last&&C.get(last);
+ if(!e){pd.innerHTML=`<div class="sl s1 vac">${av('',0)}<div class="tx"><span class="un">—</span></div></div>`;return}
+ const tm=(e.t>=0&&T[e.t])?T[e.t]:null,col=tm?(tm.c==='#f1f1f1'?'#e5e5e5':tm.c):'#ffe14d',rg=rango(e.n);
+ let fl='';try{if(tm)fl=`<svg class="hflag" viewBox="0 0 40 26" aria-hidden="true">${flag(tm.id,0,0,40,26)}</svg>`}catch(x){}
+ pd.innerHTML=`<div class="sl s1 gm${last===hit?' hit':''}" style="--tc:${col}">${fl}<span class="cr">👑</span><div class="avw">${av(e.url,0)}</div><div class="tx"><span class="un">@${esc(last)}</span>${tm?`<span class="cl">${esc(tm.n)}</span>`:''}<span class="rg" style="--rc:${rg[1]}">${rg[0]}</span><span class="ct">🎁 ×${e.n}</span></div></div>`}
 function honra(e){const u=String(e.username),n=Math.max(1,+e.activityCount||1);
  const url=e.profilePictureUrl||e.profilePicture||e.avatarUrl||e.avatar||e.userImage||e.imageUrl||'';
- const c=C.get(u)||{n:0,url:''};c.n+=n;if(url)c.url=url;C.set(u,c);hit=u;pinta();hit=''}
+ const c=C.get(u)||{n:0,url:'',t:-1};c.n+=n;if(url)c.url=url;let tt=-1;try{tt=recentChatTeam(u.toLowerCase())}catch(x){}if(tt>=0)c.t=tt;C.set(u,c);last=u;hit=u;pinta();hit=''}
 const _h=handleLiveEntry;
 handleLiveEntry=function(e){const r=_h.apply(this,arguments);try{if(e&&!e.bot&&e.type==='gift'&&e.username)honra(e)}catch(x){}return r};
-const _r=reset;reset=function(){C=new Map();pinta();return _r.apply(this,arguments)};
+const _r=reset;reset=function(){C=new Map();last='';pinta();return _r.apply(this,arguments)};
 /* SALA DE HONOR: se vacia en CADA partido. Ademas del reset del juego, vigila el cambio de duelo y el cierre de la pantalla de ganador. */
 let hSig='',hWin=false;
 setInterval(()=>{try{const sg=T[0].n+'|'+T[1].n,w=!!document.querySelector('#win.show');
- if((hSig&&sg!==hSig)||(hWin&&!w)){C=new Map();pinta()}hSig=sg;hWin=w}catch(e){}},400);
+ if((hSig&&sg!==hSig)||(hWin&&!w)){C=new Map();last='';pinta()}hSig=sg;hWin=w}catch(e){}},400);
 pinta();
 })();
 </script>
@@ -3558,21 +3563,29 @@ pinta();
 <script>
 (function(){
 const side=document.querySelector('.side');if(!side)return;
-const box=document.createElement('section');box.id='copas';box.setAttribute('aria-label','Copas por club');
+const box=document.createElement('section');box.id='copas';box.classList.add('cp2');box.setAttribute('aria-label','Copas por club');
 const t3=document.getElementById('top3');side.insertBefore(box,t3?t3.nextSibling:null);
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nom=id=>{try{const n=tournamentItem(id).n;return n[0]+n.slice(1).toLowerCase()}catch(e){return String(id).toUpperCase()}};
 const ban=id=>{try{return`<svg viewBox="0 0 40 40" aria-hidden="true">${flag(id,0,0,40,40)}</svg>`}catch(e){return'<svg viewBox="0 0 40 40"></svg>'}};
-let ult='';
+let ult='';const prev={};
 function pinta(){try{
  let cp={};try{cp=SRV.get('cluss.v1',{}).cp||{}}catch(e){}const act=T.map(x=>x.id);
  /* el podio: los 3 clubes con mas copas; el duelo en curso desempata y siempre aparece si hay lugar */
  let bra=[];try{bra=(BR.r[0]||[]).filter(Boolean)}catch(e){}
  const con=Object.keys(cp).filter(k=>(cp[k]||0)>0),ord=id=>{const q=bra.indexOf(id);return q<0?99:q};
  const ids=[...new Set([...con,...act,...bra])];
- const a=ids.sort((x,y)=>(cp[y]||0)-(cp[x]||0)||(act.includes(y)-act.includes(x))||ord(x)-ord(y)).slice(0,3);
- const h='<div class="hh">🏆 COPAS</div>'+a.map((id,i)=>`<div class="rw${i?'':' f1'}${act.includes(id)?' on':''}${cp[id]?'':' z'}"${act.includes(id)?' title="●"':''}>${ban(id)}<span class="nm">${esc(nom(id))}</span><span class="ct">${cp[id]||0}<small>🏆</small></span></div>`).join('');
- if(h!==ult){ult=h;box.innerHTML=h}}catch(e){}}
+ const a=ids.sort((x,y)=>(cp[y]||0)-(cp[x]||0)||(act.includes(y)-act.includes(x))||ord(x)-ord(y)).slice(0,2);
+ /* v28: DOS tarjetas del MISMO tamano (1° y 2°). Medalla, corona, copas en grande, barra de distancia al lider, estado (ventaja / a cuantas copas esta / empate), punto verde si esta en pista y destello +1 al ganar una copa. */
+ const en=!!(window.I18N&&window.I18N.en),c0=cp[a[0]]||0,c1=a[1]?(cp[a[1]]||0):0,top=Math.max(c0,c1,0);
+ const card=(id,i)=>{const n=cp[id]||0,other=i?c0:c1,tie=n>0&&n===other,rk=(i===0||tie)?1:2,gap=Math.abs(c0-c1),
+  up=(id in prev)&&n>prev[id],pct=top>0?Math.round(n/top*100):0;
+  let st;if(!top)st=en?'Go for #1!':'¡A por la 1ª!';else if(tie)st=en?'TIE!':'¡EMPATE!';else if(rk===1)st=en?`LEADER +${gap}`:`¡LÍDER! +${gap}`;else st=en?`${gap} behind`:`a ${gap} 🏆 del líder`;
+  const live=act.includes(id);
+  const lb=rk===1?(en?'1ST PLACE':'PRIMER PUESTO'):(en?'2ND PLACE':'SEGUNDO PUESTO');
+  return `<div class="cc p${i+1} r${rk}${live?' on':''}${n?'':' z'}${up?' up':''}" aria-label="${lb} · ${esc(nom(id))}: ${n}"><span class="cc-lb">${lb}</span><span class="cc-rk">${rk===1?'🥇':'🥈'}</span>${i===0?'<span class="cc-cr">👑</span>':''}${live?`<span class="cc-live" title="${en?'Racing':'En pista'}"></span>`:''}<span class="cc-row"><span class="cc-fl">${ban(id)}</span><span class="cc-n d${String(n).length}">${n}</span></span><span class="cc-nm">${esc(nom(id))}</span><span class="cc-bar"><i style="width:${pct}%"></i></span><span class="cc-st">${st}</span>${up?'<b class="cc-plus">+1 🏆</b>':''}</div>`};
+ const h=`<div class="hh">🏆 ${en?'CUPS':'COPAS'}</div>`+a.map(card).join('');
+ if(h!==ult){ult=h;box.innerHTML=h;a.forEach(id=>{prev[id]=cp[id]||0})}}catch(e){}}
 setInterval(pinta,1500);pinta();
 })();
 </script>
@@ -3810,7 +3823,7 @@ const bt=document.createElement('button');bt.className='sm';bt.id='bCta';bt.type
 const ver=[...foot.children].find(c=>c.id==='filaVT'||c.classList.contains('version'));if(ver)foot.insertBefore(bt,ver);else foot.appendChild(bt);
 /* REGALO AL AZAR: en cada carrera (o al cambiar el duelo) cada equipo sortea su regalo y nunca son el mismo. Solo se ven con el CTA encendido. */
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
-function sortea(){const a=rnd(KEYS),b=rnd(KEYS.filter(k=>k!==a));st.A=[a];st.B=[b]}
+function sortea(){st.A=[];st.B=[]} /* CTA de equipos DESACTIVADOS por defecto: ya no se sortea regalo; se pueden activar a mano desde el boton CTA */
 let sigD='',winOn=false;
 function carrera(){try{const sg=T[0].n+'|'+T[1].n,w=!!document.querySelector('#win.show');
  if(sg!==sigD||(winOn&&!w)){sigD=sg;sortea()}winOn=w}catch(e){}}
@@ -4060,8 +4073,8 @@ poll();setInterval(poll,500);paint();
 /* cuadro de hinchas: DOS cuadros (uno por equipo), 12 hinchas cada uno, avatares grandes. El borde lleva el color del equipo */
 #rank{order:-2;flex:none;display:grid;grid-template-columns:1fr 1fr;gap:4px}
 #rank .rk{display:grid;grid-template-columns:repeat(var(--rc,4),minmax(0,1fr));gap:5px 3px;justify-items:center;align-content:start;padding:5px 4px 5px;background:linear-gradient(#7a4e2a,#5a3a1e);border:2px solid var(--tc,#3f2713);border-radius:10px;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
-#rank .u{position:relative;width:min(100%,40px);min-width:0}
-#rank .av{width:100%;aspect-ratio:1/1;border-radius:50%;border:2px solid var(--c,#c9ccd1);background:#3f2713;display:flex;align-items:center;justify-content:center;overflow:hidden;font:800 16px Inter,sans-serif;color:#fff}
+#rank .u{position:relative;width:min(100%,33px);min-width:0}
+#rank .av{width:100%;aspect-ratio:1/1;border-radius:50%;border:2px solid var(--c,#c9ccd1);background:#3f2713;display:flex;align-items:center;justify-content:center;overflow:hidden;font:800 14px Inter,sans-serif;color:#fff}
 #rank .av img{width:100%;height:100%;object-fit:cover;display:block}
 #rank .n{position:absolute;left:-3px;top:-4px;min-width:13px;height:13px;padding:0 2px;border-radius:7px;background:#3f2713;border:1px solid #ffe14d;color:#ffe14d;font:900 8px/11px Inter,sans-serif;text-align:center;z-index:2}
 #rank .u.f1 .av{border-color:#ffe14d;box-shadow:0 0 6px 1px rgba(255,225,77,.7)}
@@ -4076,7 +4089,7 @@ poll();setInterval(poll,500);paint();
 <script>
 (function(){
 /* ---------- 2) CUADRO DE USUARIOS: top 10 con su puntaje (1.2K, 3.4M) ---------- */
-const PER_TEAM=12,COLS=4; /* 12 hinchas por equipo; COLS=4 -> 3 filas de avatares grandes (6 -> 2 filas mas bajas y avatares mas chicos) */
+const PER_TEAM=16,COLS=4; /* 12 hinchas por equipo; COLS=4 -> 3 filas de avatares grandes (6 -> 2 filas mas bajas y avatares mas chicos) */
 const fmt=n=>{n=Math.floor(n||0);if(n<1000)return String(n); /* 999 -> 1k -> 12k -> 1.2m */
  const f=v=>v<10?v.toFixed(1).replace(/\.0$/,''):String(Math.round(v));
  return n>=999500?f(n/1e6)+'m':f(n/1e3)+'k'};
@@ -4284,7 +4297,9 @@ window.archivoCluss={open,close,votes:{vote,commitRound,obj:votesObj,json:()=>JS
 #nivelBadge{position:relative}
 #nivelBadge.up:after{content:"🆙";position:absolute;right:-8px;top:-12px;font-size:16px;animation:gmUp 1s ease-out forwards}
 @keyframes gmUp{0%{opacity:0;transform:translateY(6px) scale(.4)}25%{opacity:1;transform:translateY(-2px) scale(1.3)}100%{opacity:0;transform:translateY(-18px) scale(1)}}
-#gmHot{position:absolute;left:50%;top:44px;transform:translateX(-50%);z-index:45;display:none;padding:3px 12px;border-radius:12px;border:2px solid #ff8a1f;background:rgba(20,8,2,.88);color:#ffd34d;font:900 12px/1.1 Inter,sans-serif;letter-spacing:.4px;text-shadow:0 1px 2px #000;pointer-events:none;white-space:nowrap}
+#gmHot .tot{display:block;margin-top:3px;padding-top:2px;border-top:1px solid rgba(255,211,77,.45);font-size:11px;color:#fff;text-align:center;font-variant-numeric:tabular-nums}
+#gmHot .tot b{color:#ffe14d;font-size:14px}
+#gmHot{position:absolute;left:50%;top:44px;transform:translateX(-50%);z-index:45;display:none;text-align:center;padding:3px 12px;border-radius:12px;border:2px solid #ff8a1f;background:rgba(20,8,2,.88);color:#ffd34d;font:900 12px/1.1 Inter,sans-serif;letter-spacing:.4px;text-shadow:0 1px 2px #000;pointer-events:none;white-space:nowrap}
 #gmHot.on{display:block;animation:gmHot 1.2s ease-in-out infinite alternate}
 @keyframes gmHot{from{box-shadow:0 0 6px 1px rgba(255,138,31,.6)}to{box-shadow:0 0 16px 5px rgba(255,138,31,.95)}}
 @media (prefers-reduced-motion:reduce){.lane.turbo .sv:after,#nivelBadge.up:after,#gmHot.on{animation:none}}
@@ -4294,6 +4309,11 @@ window.archivoCluss={open,close,votes:{vote,commitRound,obj:votesObj,json:()=>JS
 const F=window.fx;if(!F||!F.cannon||!F.FA)return;
 const app=document.getElementById('app'),board=document.querySelector('.board'),RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
 const hot=document.createElement('div');hot.id='gmHot';hot.setAttribute('aria-hidden','true');app.appendChild(hot);
+/* EVENTOS TOTALES en tiempo real dentro del cuadro de hinchada: suma de la franja de estadisticas (unidos + comentarios + regalos + me gusta + seguidores + compartidos), solo eventos reales */
+const hotTxt=document.createElement('span'),hotTot=document.createElement('span'),hotNum=document.createElement('b');
+hotTot.className='tot';hotTot.append('📊 EVENTOS TOTALES ',hotNum);hot.append(hotTxt,hotTot);
+function updTot(){try{hotNum.textContent=Object.values(window.getLiveEventSnapshot().stats).reduce((a,b)=>a+(+b||0),0).toLocaleString('es-PY')}catch(e){}}
+updTot();setInterval(()=>{if(hot.classList.contains('on'))updTot()},500);
 const shake=()=>{if(!board||RM)return;board.classList.remove('shake');void board.offsetWidth;board.classList.add('shake')};
 let lastLv=0;
 /* 1) NIVEL: fanfarria al subir (el cartel #nivelBadge lo anima levelUp) */
@@ -4314,7 +4334,7 @@ function onTier(i){
  F.burst(208,330,col,34,240);F.ring(208,330,col);
  if(i>=1){F.cannon(0,746,-62,18,680,16);F.cannon(416,746,-118,18,680,16)}
  if(i===2){F.flash('#ffb347');F.firework(208,200);shake()}
- hot.textContent=txt;hot.style.borderColor=col;hot.classList.add('on');clearTimeout(hotT);hotT=setTimeout(()=>hot.classList.remove('on'),6000);
+ hotTxt.textContent=txt;updTot();hot.style.borderColor=col;hot.classList.add('on');clearTimeout(hotT);hotT=setTimeout(()=>hot.classList.remove('on'),6000);
 }
 /* 3) REGALOS reales: lluvia de monedas + sacudida; el primero de la ronda tiene cartel propio */
 const _h=handleLiveEntry;
@@ -4323,6 +4343,7 @@ handleLiveEntry=function(e){
  try{if(e&&!e.bot&&['chat','like','gift','follow','share'].includes(e.type)){
   const w=e.type==='like'?Math.min(5,Math.max(1,+e.activityCount||1)):e.type==='gift'?5:1;
   for(let k=0;k<w;k++)ev.push(Date.now());
+  updTot();
   const n=pulse(),now=performance.now();
   if(now-tierAt>20000)for(let i=TIERS.length-1;i>tierDone;i--)if(n>=TIERS[i][0]){tierDone=i;tierAt=now;onTier(i);break}
   if(e.type==='gift'&&!(typeof over!=='undefined'&&over)){
@@ -4498,5 +4519,267 @@ document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!panel.hidd
 render();
 })();
 </script>
+<!-- ===== CRONOMETRO + CONTADOR DE REGALOS EN RECUADRO (v1): a la izquierda del contador de regalos (abajo a la derecha) corre un cronometro hh:mm:ss que mide cuanto tiempo lleva activo el overlay (desde que carga la pagina; no se reinicia con las carreras). Los dos van en recuadros de alto contraste. El numero de regalos sigue siendo #giftTotal (lo actualiza el motor). Para quitar: borrar este bloque. ===== -->
+<style id="crono-regalos">
+/* v2: cronometro + contador de regalos van DENTRO de la fila del menu desplegable (cluss ▾ · Nv · ... cronometro · regalos), pegados a la derecha. Con el menu cerrado se ven siempre; con el menu abierto ocupan 3 celdas de la grilla. */
+#cronoRegalos{position:static;flex:0 0 auto;margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:6px;pointer-events:none}
+#topbar.cerrado .foot>#cronoRegalos{display:flex!important}
+#topbar:not(.cerrado) .foot>#cronoRegalos{grid-column:span 3;margin-left:0}
+/* cronometro y contador de regalos: MISMO tamano (alto 26 px, borde 2 px, letra 15 px); solo cambia el color del borde */
+#cronoRegalos #crono,#cronoRegalos #giftTotal{box-sizing:border-box;height:26px;display:flex;align-items:center;gap:4px;padding:0 7px;border-radius:7px;background:#0b0b0b;border-style:solid;border-width:2px;font:800 15px/1 Inter,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.3px;white-space:nowrap;position:static;text-align:left;text-shadow:0 1px 2px #000}
+#cronoRegalos #crono{border-color:#5ec3f2;box-shadow:0 2px 5px rgba(0,0,0,.7),0 0 7px rgba(94,195,242,.5);color:#fff}
+#cronoRegalos #crono i{font-style:normal;font-size:13px}
+#cronoRegalos #giftTotal{min-width:0;border-color:#ffd34d;box-shadow:0 2px 5px rgba(0,0,0,.7),0 0 7px rgba(255,211,77,.5);color:#ffe14d}
+#cronoRegalos #giftTotal:before{content:"🏆";font-size:13px;font-weight:400}
+/* el numero del chip 🎁 de la franja de estadisticas tambien va en recuadro contrastado */
+#evs .st[data-k="gift"] span{background:#ffe14d;color:#111;text-shadow:none;padding:1px 5px;border-radius:5px;font-weight:900}
+</style>
+<script>
+(function(){
+ const g=document.getElementById('giftTotal');if(!g||document.getElementById('cronoRegalos'))return;
+ const w=document.createElement('div');w.id='cronoRegalos';
+ const c=document.createElement('div');c.id='crono';c.setAttribute('role','timer');c.title='Tiempo con el overlay activo (hh:mm:ss)';
+ const ic=document.createElement('i');ic.setAttribute('aria-hidden','true');ic.textContent='⏱';
+ const tx=document.createElement('span');tx.id='cronoTxt';tx.textContent='00:00:00';
+ c.append(ic,tx);
+ const nb=document.getElementById('nivelBadge'),foot=document.querySelector('#topbar .foot')||document.querySelector('.foot');
+ if(nb&&nb.parentNode)nb.after(w);else if(foot)foot.appendChild(w);else g.parentNode.insertBefore(w,g);
+ w.append(c,g);
+ const t0=Date.now(),p=n=>String(n).padStart(2,'0');
+ function tick(){const s=Math.max(0,Math.floor((Date.now()-t0)/1000)),t=p(Math.floor(s/3600))+':'+p(Math.floor(s%3600/60))+':'+p(s%60);if(tx.textContent!==t){tx.textContent=t;c.setAttribute('aria-label','Tiempo activo '+t)}}
+ tick();setInterval(tick,1000);
+})();
+</script>
+<!-- ===== ORDEN DE LA COLUMNA DERECHA (v1): COPAS arriba (justo debajo de Don Tortu) y HONOR abajo. Para volver al orden anterior (honor arriba, copas abajo): borrar este bloque. ===== -->
+<style id="orden-copas-honor">
+.side>#copas{order:-1}
+.side>#honor{order:1}
+/* COPAS al DOBLE de alto (de ~89 a ~178 px). Para que la columna no crezca y empuje el resto de la pantalla, HONOR se compacta: cada puesto en una sola fila (medalla + usuario + cantidad). Para volver: borrar este bloque entero. */
+#copas{flex:none!important;height:178px!important}
+/* HONOR de un solo puesto: avatar del ultimo que envio regalo, con su nombre y cantidad, en columna */
+#honor{padding:4px 3px 4px!important;border-width:2px!important;margin:0!important}
+#honor .hh{font-size:9px!important;margin-bottom:4px!important;letter-spacing:.6px!important}
+#honor .pd{gap:0!important}
+#honor .sl{flex-direction:column!important;align-items:center!important;gap:2px!important;padding:5px 3px 3px!important;border-radius:10px!important}
+#honor .av,#honor .s1 .av{width:44px!important;height:44px!important;font-size:24px!important;border-width:3px!important}
+#honor .cr{left:2px!important;top:-8px!important;font-size:18px!important}
+#honor .tx{align-items:center!important;gap:0!important;width:100%}
+#honor .un{font-size:10px!important;text-align:center!important}
+#honor .ct{font-size:16px!important}
+/* COPAS: el PRIMER PUESTO al DOBLE (bandera 26->52 px, corona 14->28 px, cantidad 20->40 px, nombre mas grande) en columna; el SEGUNDO (y tercero) quedan chicos y apagados, de menos valor visual. Para volver: borrar hasta el cierre de este bloque. */
+#copas .rw.f1{flex:3 1 0!important;max-height:none!important;flex-direction:column!important;justify-content:center;gap:0!important;padding:14px 3px 2px!important;margin-top:6px!important;background:rgba(255,225,77,.24)!important;border-width:2px!important}
+#copas .rw.f1 svg{width:52px!important;height:52px!important;box-shadow:0 0 0 2px #ffe14d,0 0 10px 2px rgba(255,225,77,.65)!important}
+#copas .rw.f1:after{content:"👑"!important;display:block!important;position:absolute;left:50%;right:auto!important;top:-4px!important;font-size:28px!important;line-height:1;transform:translateX(-50%) rotate(-8deg)!important;z-index:3}
+#copas .rw.f1 .nm{flex:none!important;max-width:100%;font-size:11px!important;line-height:1.1!important;text-align:center!important;color:#fff}
+#copas .rw.f1 .ct{font-size:40px!important;line-height:.9!important;opacity:1!important}
+#copas .rw.f1 .ct small{font-size:16px!important}
+#copas .rw:not(.f1){flex:1 1 0!important;opacity:.6;filter:saturate(.6);padding:1px 3px!important;background:rgba(255,255,255,.05)!important}
+#copas .rw:not(.f1) svg{width:20px!important;height:20px!important;box-shadow:none!important}
+#copas .rw:not(.f1) .nm{font-size:9px!important;font-weight:700!important}
+#copas .rw:not(.f1) .ct{font-size:13px!important}
+#copas .rw:not(.f1) .ct small{font-size:9px!important}
+#copas .rw:not(.f1):before{min-width:12px!important;height:12px!important;font-size:8px!important;line-height:9px!important;top:-4px!important}
+</style>
+
+<!-- ===== ALARMA DE ADVERTENCIA (v26): desde el 50% de recorrido, avisa al equipo que va perdiendo que un CAPIBARA le puede dar la carrera; a los 10 s sin regalo suyo, avisa al que va ganando (perfume). Regalo CAPIBARA real (desde el 50%) = victoria del equipo que ese usuario nombro en el chat el ultimo minuto. Capa independiente: para quitarla, borrar este bloque. ===== -->
+<style id="alarma-css">
+#alarmaFx{position:absolute;inset:0;z-index:30;pointer-events:none;display:none;box-shadow:inset 0 0 60px 14px rgba(255,30,30,.85)}
+#alarmaFx.on{display:block;animation:alFlash .45s ease-in-out infinite}
+@keyframes alFlash{0%,100%{opacity:.15}50%{opacity:1}}
+#alarmaBn{position:absolute;left:50%;top:104px;transform:translateX(-50%);z-index:31;pointer-events:none;display:none;width:372px;max-width:92%;box-sizing:border-box;padding:8px 12px;border-radius:14px;border:3px solid #fff;background:linear-gradient(#ff3b3b,#a40d0d);color:#fff;text-align:center;font:900 16px/1.2 Inter,sans-serif;text-shadow:0 2px 2px #000;box-shadow:0 0 18px 6px rgba(255,40,40,.85),0 4px 10px rgba(0,0,0,.6)}
+#alarmaBn.on{display:block;animation:alPop .5s ease-out,alGlow .6s ease-in-out .5s infinite}
+#alarmaBn.ok{background:linear-gradient(#35c759,#0c6a32);box-shadow:0 0 18px 6px rgba(60,220,110,.8),0 4px 10px rgba(0,0,0,.6)}
+#alarmaBn small{display:block;font:800 12px/1.2 Inter,sans-serif;margin-top:3px;color:#fff4cf}
+@keyframes alPop{0%{transform:translateX(-50%) scale(.4);opacity:0}60%{transform:translateX(-50%) scale(1.12)}100%{transform:translateX(-50%) scale(1);opacity:1}}
+@keyframes alGlow{50%{filter:brightness(1.3)}}
+@media (prefers-reduced-motion:reduce){#alarmaFx.on,#alarmaBn.on{animation:none}}
+</style>
+<script>
+(function(){
+const app=document.getElementById('app');if(!app)return;
+const fx=document.createElement('div');fx.id='alarmaFx';fx.setAttribute('aria-hidden','true');fx.setAttribute('data-noi18n','');
+const bn=document.createElement('div');bn.id='alarmaBn';bn.setAttribute('role','alert');bn.setAttribute('data-noi18n','');
+app.append(fx,bn);
+const EN=()=>!!(window.I18N&&window.I18N.en);
+const CAPI=/capibara|capybara|carpincho/i,PERF=/perfume|perfum/i;
+const AL_MIN=50,GAP_MIN=1,WAIT_MS=10000,COOL_MS=15000; /* AL_MIN: % de recorrido desde el que aplica todo */
+let lastLoser=-1,lastAt=0,t2=0,tb=0,tf=0,giftAt=[];
+/* Sirena propia (WebAudio); respeta el boton 🔊 */
+let ac;
+function sirena(){try{
+ const b=document.getElementById('bSfx');if(b&&b.getAttribute('aria-pressed')==='false')return;
+ ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume().catch(()=>{});
+ const t=ac.currentTime,g=ac.createGain();g.connect(ac.destination);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.16,t+.05);g.gain.setValueAtTime(.16,t+2.3);g.gain.exponentialRampToValueAtTime(.0001,t+2.6);
+ const o=ac.createOscillator();o.type='square';o.connect(g);
+ for(let i=0;i<6;i++){o.frequency.setValueAtTime(i%2?720:1020,t+i*.4)}
+ o.start(t);o.stop(t+2.65);
+}catch(e){}}
+function voz(txt){try{
+ const b=document.getElementById('bVoz');if(b&&b.getAttribute('aria-pressed')==='false')return;
+ const SS=window.speechSynthesis;if(!SS)return;
+ const u=new SpeechSynthesisUtterance(txt),en=EN();u.lang=en?'en-US':'es-419';u.rate=1.08;u.pitch=1.15;u.volume=1;
+ const vs=SS.getVoices?SS.getVoices():[],v=vs.find(x=>x.lang&&x.lang.toLowerCase().startsWith(en?'en':'es'));if(v)u.voice=v;
+ SS.speak(u);
+}catch(e){}}
+function muestra(html,ok,ms){
+ clearTimeout(tb);bn.classList.remove('on','ok');void bn.offsetWidth;bn.innerHTML=html;if(ok)bn.classList.add('ok');bn.classList.add('on');
+ tb=setTimeout(()=>bn.classList.remove('on','ok'),ms||6000);
+}
+function flash(ms){clearTimeout(tf);fx.classList.add('on');tf=setTimeout(()=>fx.classList.remove('on'),ms||2600)}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const maxP=()=>Math.max(0,...S.map(s=>Math.min(100,s.p)));
+function limpia(){clearTimeout(t2);clearTimeout(tb);clearTimeout(tf);bn.classList.remove('on','ok');fx.classList.remove('on');lastLoser=-1;giftAt=[]}
+/* Paso 1: alarma al equipo que va perdiendo */
+function alarma(loser,leader){
+ const n=esc(T[loser].n),en=EN();
+ sirena();flash(2600);
+ muestra(en?`🚨 ${n} IS LOSING!<small>Send a capybara 🦫 and you can win the race!</small>`
+            :`🚨 ¡${n} VA PERDIENDO!<small>¡Envía un capibara 🦫 y puedes ganar la carrera!</small>`,false,6500);
+ voz(en?`Alert! ${T[loser].n}, you are losing, but if you send a capybara you can win the race.`
+        :`¡Alerta! ${T[loser].n}, vas perdiendo, pero si envías un capibara puedes ganar la carrera.`);
+ try{say(en?`🚨 ${T[loser].n} is losing! A capybara can win it!`:`🚨 ¡${T[loser].n} va perdiendo! ¡Un capibara puede ganar!`)}catch(e){}
+ /* Paso 2: a los 10 s, si el que pierde no envio ningun regalo, se le avisa al que va ganando */
+ clearTimeout(t2);const since=Date.now();
+ t2=setTimeout(()=>{
+  if(over||lastLoser!==loser)return;
+  if((giftAt[loser]||0)>=since)return;
+  const nl=esc(T[leader].n);
+  muestra(en?`🏆 ${nl} IS WINNING!<small>Send a perfume 🧴 to keep winning!</small>`
+            :`🏆 ¡${nl} VA GANANDO!<small>¡Envía un perfume 🧴 y sigues ganando!</small>`,true,6000);
+  voz(en?`${T[leader].n}, you are winning! If you send a perfume you keep winning.`
+        :`¡${T[leader].n} va ganando! Si envían un perfume siguen ganando.`);
+ },WAIT_MS);
+}
+/* Vigilante: cada 0,5 s revisa quien va primero (solo desde AL_MIN %) */
+setInterval(()=>{try{
+ if(over||!S||S.length<2){if(over)limpia();return}
+ if(maxP()<AL_MIN){if(lastLoser>=0)limpia();return}
+ let a=0,b=0;S.forEach((s,i)=>{if(s.p>S[a].p)a=i;if(s.p<S[b].p)b=i});
+ if(a===b||S[a].p-S[b].p<GAP_MIN)return;
+ if(b!==lastLoser&&Date.now()-lastAt>=COOL_MS){lastLoser=b;lastAt=Date.now();alarma(b,a)}
+}catch(e){}},500);
+/* Regalos reales: marca quien envio y, si es CAPIBARA desde el 50%, da la victoria */
+const _h=handleLiveEntry;
+handleLiveEntry=function(e){
+ const r=_h.apply(this,arguments);
+ try{
+  if(!e||e.bot||e.type!=='gift'||over)return r;
+  const gn=String(e.giftName||e.gift_name||(e.gift&&e.gift.name)||(typeof e.gift==='string'?e.gift:'')||e.content||'');
+  const u=String(e.username||'').trim().toLowerCase(),t=u?recentChatTeam(u):-1;
+  if(t>=0&&T[t])giftAt[t]=Date.now();
+  if(CAPI.test(gn)&&maxP()>=AL_MIN){
+   if(t<0||!T[t]){console.info('[capibara] sin equipo reciente en el chat para @'+u);return r}
+   clearTimeout(t2);
+   const en=EN();muestra(en?`🦫 CAPYBARA! ${esc(T[t].n)} WINS!`:`🦫 ¡CAPIBARA! ¡${esc(T[t].n)} GANA!`,true,3000);
+   S[t].p=100;win(t);
+  }else if(PERF.test(gn)&&maxP()>=AL_MIN&&t>=0&&T[t]){
+   muestra(EN()?`🧴 PERFUME! ${esc(T[t].n)} keeps going!`:`🧴 ¡PERFUME! ¡${esc(T[t].n)} sigue arriba!`,true,2500);
+  }
+ }catch(x){console.error(x)}
+ return r;
+};
+const _r=reset;reset=function(){limpia();lastAt=0;return _r.apply(this,arguments)};
+})();
+</script>
+
+<!-- ===== COPAS v28: cuadro MAS ALTO (ocupa todo el alto libre de la columna) y 1° y 2° con el MISMO espacio. Tarjetas con medalla, corona, copas grandes, barra de distancia al lider, estado y destello +1. Para volver: borrar este bloque y las lineas 'v28' del script de #copas. ===== -->
+<style id="copas-v28">
+#copas.cp2{flex:1 1 auto!important;height:auto!important;min-height:0!important;margin:0!important;padding:5px 4px 4px!important;display:flex!important;flex-direction:column!important;gap:6px!important;align-self:stretch!important;overflow:visible!important;border-width:2px!important}
+#copas.cp2 .hh{flex:none;font-size:10px!important;margin-bottom:0!important;letter-spacing:.8px!important}
+#copas.cp2 .cc{position:relative;flex:1 1 0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:9px 3px 4px;border-radius:11px;border:2px solid rgba(215,219,226,.7);background:linear-gradient(rgba(215,219,226,.24),rgba(215,219,226,.07));text-align:center;color:#fff;transition:box-shadow .3s,border-color .3s}
+#copas.cp2 .cc.r1{border-color:#ffe14d;background:linear-gradient(rgba(255,225,77,.32),rgba(255,225,77,.1));box-shadow:0 0 10px 1px rgba(255,225,77,.55)}
+#copas.cp2 .cc.z{filter:saturate(.8)}
+#copas.cp2 .cc-rk{position:absolute;left:-6px;top:-8px;font-size:17px;line-height:1;z-index:3;filter:drop-shadow(0 1px 1px #000)}
+#copas.cp2 .cc-cr{position:absolute;left:12px;top:-8px;font-size:19px;line-height:1;z-index:3;transform:rotate(-14deg);animation:ccBob 1.6s ease-in-out infinite;filter:drop-shadow(0 1px 1px #000)}
+@keyframes ccBob{50%{transform:rotate(-14deg) translateY(-3px)}}
+#copas.cp2 .cc-live{position:absolute;right:5px;top:5px;width:8px;height:8px;border-radius:50%;background:#3ddc5a;box-shadow:0 0 6px 2px rgba(61,220,90,.9);animation:ccLive 1.2s ease-in-out infinite}
+@keyframes ccLive{50%{opacity:.35}}
+#copas.cp2 .cc-row{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;min-width:0}
+#copas.cp2 .cc-fl{flex:none;display:block;width:38px;height:38px;line-height:0}
+#copas.cp2 .cc-fl svg{width:38px;height:38px;border-radius:50%;box-shadow:0 0 0 2px #fff,0 2px 5px rgba(0,0,0,.6)}
+#copas.cp2 .cc.r1 .cc-fl svg{box-shadow:0 0 0 2px #ffe14d,0 0 9px 2px rgba(255,225,77,.7)}
+#copas.cp2 .cc-n{flex:0 1 auto;min-width:0;font:900 32px/1 Inter,sans-serif;color:#ffe14d;text-shadow:0 2px 2px #000}
+#copas.cp2 .cc.z .cc-n{opacity:.55}
+#copas.cp2 .cc-nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:800 11px/1.1 Inter,sans-serif}
+#copas.cp2 .cc-bar{width:88%;height:6px;border-radius:3px;background:rgba(0,0,0,.5);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+#copas.cp2 .cc-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(#d7dbe2,#9aa0aa);transition:width .6s ease-out}
+#copas.cp2 .cc.r1 .cc-bar i{background:linear-gradient(#ffe14d,#e0a800)}
+#copas.cp2 .cc-st{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:900 9px/1.1 Inter,sans-serif;letter-spacing:.2px;color:#fff4cf;text-shadow:0 1px 2px #000}
+#copas.cp2 .cc.r1 .cc-st{color:#ffe14d}
+#copas.cp2 .cc.up{animation:ccUp .9s ease-out}
+#copas.cp2 .cc.up .cc-n{animation:ccNum .9s ease-out}
+@keyframes ccUp{0%{transform:scale(1)}30%{transform:scale(1.07);box-shadow:0 0 18px 6px rgba(255,225,77,.95)}100%{transform:scale(1)}}
+@keyframes ccNum{0%{transform:scale(.4)}60%{transform:scale(1.5)}100%{transform:scale(1)}}
+#copas.cp2 .cc-plus{position:absolute;right:4px;top:12px;z-index:4;font:900 14px/1 Inter,sans-serif;color:#fff;text-shadow:0 0 6px #ffe14d,0 2px 2px #000;pointer-events:none;animation:ccPlus 1.6s ease-out forwards}
+@keyframes ccPlus{0%{opacity:0;transform:translateY(8px) scale(.6)}15%{opacity:1;transform:translateY(0) scale(1.2)}100%{opacity:0;transform:translateY(-22px) scale(1)}}
+@media (prefers-reduced-motion:reduce){#copas.cp2 .cc-cr,#copas.cp2 .cc-live,#copas.cp2 .cc.up,#copas.cp2 .cc.up .cc-n,#copas.cp2 .cc-plus{animation:none}}
+</style>
+
+<!-- ===== BANDERA NORMAL + CORONA DE REY (v31): la bandera de cada carril vuelve a su proporcion normal (sin recortar ni estirar), un poco mas grande que antes; el equipo que VA GANANDO lleva una corona de rey grande sobre la bandera (desaparece si se empata o cambia el lider). Para volver: borrar este bloque. ===== -->
+<style id="banderas-anchas">
+.banRos{flex-wrap:wrap!important;justify-content:center!important;margin-top:2px!important;gap:3px!important}
+.banRos svg.fgb,.hd .banRos svg.fgb{box-sizing:border-box;flex:none!important;width:70px!important;height:49px!important;max-width:100%;border-width:2px!important;border-radius:5px!important}
+.banRos .ctaBox{flex:1 0 100%}
+.lane .hd .crown{display:none;position:absolute;left:50%!important;right:auto!important;top:-17px!important;width:46px;height:36px;z-index:6;overflow:visible;transform:translateX(-50%) rotate(-7deg);transform-origin:50% 100%;filter:drop-shadow(0 2px 2px rgba(0,0,0,.75))}
+.lane.lead .hd .crown{display:block!important;animation:reyBob 1.8s ease-in-out infinite}
+@keyframes reyBob{0%,100%{transform:translateX(-50%) rotate(-7deg) translateY(0)}50%{transform:translateX(-50%) rotate(-7deg) translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.lane.lead .hd .crown{animation:none}}
+</style>
+<script>
+(function(){
+/* corona de rey (dibujo propio) y bandera sin recorte */
+function ajusta(){try{
+ document.querySelectorAll('#lanes svg.fgb').forEach(f=>{if(f.getAttribute('preserveAspectRatio')!=='xMidYMid meet')f.setAttribute('preserveAspectRatio','xMidYMid meet')});
+ document.querySelectorAll('#lanes svg.crown').forEach((c,i)=>{if(c.dataset.rey)return;c.dataset.rey='1';
+  c.setAttribute('viewBox','0 0 44 34');c.setAttribute('width','46');c.setAttribute('height','36');
+  c.innerHTML='<defs><linearGradient id="rey'+i+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3a0"/><stop offset=".5" stop-color="#ffd23f"/><stop offset="1" stop-color="#c98a00"/></linearGradient></defs>'
+  +'<path d="M5 27 L2 9 L13 18 L22 4 L31 18 L42 9 L39 27Z" fill="url(#rey'+i+')" stroke="#7a4f00" stroke-width="1.7" stroke-linejoin="round"/>'
+  +'<rect x="3" y="26" width="38" height="7" rx="2.5" fill="url(#rey'+i+')" stroke="#7a4f00" stroke-width="1.7"/>'
+  +'<circle cx="2" cy="8" r="3" fill="#ff3b5c" stroke="#7a4f00" stroke-width="1.2"/><circle cx="22" cy="3.5" r="3.4" fill="#ff3b5c" stroke="#7a4f00" stroke-width="1.2"/><circle cx="42" cy="8" r="3" fill="#ff3b5c" stroke="#7a4f00" stroke-width="1.2"/>'
+  +'<circle cx="12" cy="29.5" r="2" fill="#4da3ff" stroke="#fff" stroke-width=".8"/><circle cx="22" cy="29.5" r="2.3" fill="#ff3b5c" stroke="#fff" stroke-width=".8"/><circle cx="32" cy="29.5" r="2" fill="#3ddc5a" stroke="#fff" stroke-width=".8"/>'})
+}catch(e){}}
+setInterval(ajusta,500);ajusta();
+})();
+</script>
+
+<style id="regalo-nombre">
+.ev .eb{white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis}
+</style>
+
+<!-- ===== COPAS v32: el 2° puesto un poco mas chico que el 1°, y cada tarjeta dice PRIMER PUESTO / SEGUNDO PUESTO. Para volver a tarjetas iguales: borrar este bloque. ===== -->
+<style id="copas-v32">
+#copas.cp2 .cc.p1{flex:1.5 1 0}
+#copas.cp2 .cc.p2{flex:.8 1 0;padding:3px 3px 2px;gap:1px}
+#copas.cp2 .cc-lb{order:-1;flex:none;max-width:100%;box-sizing:border-box;padding:2px 6px;border-radius:7px;background:#ffe14d;color:#3a2300;font:900 7.5px/1 Inter,sans-serif;letter-spacing:.1px;white-space:nowrap;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.5)}
+#copas.cp2 .cc.r2 .cc-lb{background:#d7dbe2;color:#1d1d22}
+#copas.cp2 .cc.p2 .cc-lb{font-size:7px;padding:2px 3px}
+#copas.cp2 .cc.p2 .cc-fl,#copas.cp2 .cc.p2 .cc-fl svg{width:22px;height:22px}
+#copas.cp2 .cc.p2 .cc-n{font-size:19px}
+#copas.cp2 .cc.p2 .cc-nm{font-size:10px}
+#copas.cp2 .cc.p2 .cc-bar{height:5px}
+#copas.cp2 .cc.p2 .cc-st{font-size:8.5px}
+#copas.cp2 .cc.p2 .cc-rk{font-size:15px;top:-7px}
+#copas.cp2 .cc.p2 .cc-cr{font-size:16px;top:-6px}
+/* numeros de 2 y 3 cifras mas chicos para que no se salgan; punto verde abajo a la derecha; corona arriba a la derecha */
+#copas.cp2 .cc-n.d2{font-size:26px}#copas.cp2 .cc-n.d3{font-size:18px}
+#copas.cp2 .cc.p2 .cc-n.d2{font-size:21px}#copas.cp2 .cc.p2 .cc-n.d3{font-size:16px}
+#copas.cp2 .cc-live{top:-4px;bottom:auto;right:26px}
+#copas.cp2 .cc-cr,#copas.cp2 .cc.p2 .cc-cr{left:auto;right:-5px;top:-13px;font-size:24px;transform:rotate(14deg);animation:ccBob2 1.6s ease-in-out infinite}
+@keyframes ccBob2{50%{transform:rotate(14deg) translateY(-3px)}}
+</style>
+<style id="honor-gami">
+#honor .sl.gm{position:relative;gap:2px!important;padding:0 0 4px!important;overflow:visible;border:2px solid var(--tc);background:linear-gradient(rgba(255,255,255,.1),rgba(0,0,0,.25))!important;box-shadow:0 0 10px 1px var(--tc)}
+#honor .hflag{display:block;width:100%;height:38px;border-radius:8px 8px 0 0;opacity:.95}
+#honor .sl.gm .avw{margin-top:-20px;z-index:2}
+#honor .sl.gm .av,#honor .sl.gm.s1 .av{width:46px!important;height:46px!important;border:3px solid var(--tc)!important;box-shadow:0 0 0 2px #fff,0 0 12px 3px var(--tc)!important}
+#honor .sl.gm .cr{left:50%!important;top:-14px!important;transform:translateX(-50%) rotate(-10deg);font-size:20px!important;z-index:4}
+#honor .sl.gm .cl{max-width:100%;padding:0 5px;border-radius:7px;background:var(--tc);color:#111;font:900 9px/14px Inter,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#honor .sl.gm .rg{padding:0 5px;border-radius:7px;border:1.5px solid var(--rc);color:var(--rc);background:rgba(0,0,0,.55);font:900 8px/12px Inter,sans-serif;white-space:nowrap}
+#honor .sl.gm .ct{font-size:15px!important}
+#honor .sl.gm.hit{animation:hgHit .8s ease-out}
+#honor .sl.gm.hit .av{animation:hnPop .6s ease-out}
+@keyframes hgHit{0%{transform:scale(.85);box-shadow:0 0 0 0 var(--tc)}40%{transform:scale(1.08);box-shadow:0 0 22px 8px var(--tc)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){#honor .sl.gm.hit,#honor .sl.gm.hit .av{animation:none}}
+</style>
 </body>
 </html>

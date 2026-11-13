@@ -48,17 +48,23 @@ test('race divider and versus badge stay beneath the winner popup', () => {
   assert.match(html, /la viga central y el cartel VS ya NO flotan encima/);
 });
 
-test('statistics bar exposes all six LIVE event counters and both dynamic indicators', () => {
+test('statistics bar exposes LIVE counters and the separate gift total', () => {
   const start = html.indexOf('<div class="evs" id="evs"');
   const end = html.indexOf('<div id="toast"', start);
   const bar = start < 0 || end < 0 ? '' : html.slice(start, end);
-  for (const type of ['member', 'chat', 'gift', 'like', 'follow', 'share']) {
+  for (const type of ['member', 'chat', 'like', 'follow', 'share']) {
     assert.match(bar, new RegExp(`data-k="${type}"`), `${type} counter is missing`);
   }
+  assert.match(bar, /id="giftTotal"[^>]*>0<\/div>/);
   assert.match(html, /idleStat\.dataset\.k='idle'/);
   assert.match(html, /limStat\.dataset\.k='lim'/);
   assert.match(html, /id="idleCountdown"/);
   assert.match(html, /id="tapLimit"/);
+});
+
+test('voiceover announces only the rose turbo prompt at each race start', () => {
+  assert.match(html, /VL=\[\s*\{id:'intro',at:2,s:'Rositas activan el turbo',v:\[\(\)=>'Si envían rositas, se activa el turbo para que tu equipo llegue más rápido\.'\]\},\s*\]/);
+  assert.doesNotMatch(html, /GIFT_TURBO_REMINDER_MS|giftTurboReminderAt/);
 });
 
 test('statistics bar updates from real events and renders the live tap and idle values', () => {
@@ -94,12 +100,4 @@ test('large bottom-right gift count mirrors the real gift statistic without an i
   assert.match(html, /#giftTotal\{[^}]*right:10px;bottom:5px[^}]*color:#ff3b30[^}]*font:900 38px/);
   assert.match(html, /giftTotal\.textContent=stFmt\(ST\.gift\)/);
   assert.match(html, /giftTotal\.setAttribute\('aria-label','Regalos recibidos: '\+ST\.gift\)/);
-});
-
-test('gift turbo reminder repeats every five minutes only past 50 percent and level four', () => {
-  assert.match(html, /const GIFT_TURBO_REMINDER_MS=5\*60\*1000/);
-  assert.match(html, /progress>50&&tapLevel>=4/);
-  assert.match(html, /now-giftTurboReminderAt>=GIFT_TURBO_REMINDER_MS/);
-  assert.match(html, /giftTurboReminderAt=now;return/);
-  assert.match(html, /Enviar un regalo a tu equipo activa el modo turbo y le ayuda a llegar más rápido a la meta\./);
 });
