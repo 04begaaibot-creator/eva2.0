@@ -62,9 +62,52 @@ test('statistics bar exposes LIVE counters and the separate gift total', () => {
   assert.match(html, /id="tapLimit"/);
 });
 
+test('team tap counters omit the turbo badge and use the freed width for the count', () => {
+  assert.doesNotMatch(html, /<s class="gl"[^>]*>TURBO<\/s>/);
+  assert.doesNotMatch(html, /querySelector\('\.gl'\)/);
+  assert.match(html, /\.hb em\{justify-content:flex-start;left:20px;right:2px/);
+});
+
+test('tap levels begin at 25 percent and the tap limit returns to its minimum by the finish', () => {
+  assert.match(html, /LEVEL_PROGRESS_START=25,LEVEL_DESCENT_FROM=75,LEVEL_DESCENT_STEP=1\.25/);
+  assert.match(html, /progress<LEVEL_PROGRESS_START\?LEVEL_TAPS/);
+  assert.match(html, /HEART_N>tapLevelMaxN&&progress>=LEVEL_PROGRESS_START/);
+  assert.match(html, /LEVEL_MAX_TAPS-LEVEL_TAPS\*Math\.floor\(\(progress-LEVEL_DESCENT_FROM\)\/LEVEL_DESCENT_STEP\)/);
+});
+
+test('each team shows its live-wide event total in compact K and M notation', () => {
+  assert.match(html, /class="team-total" id="teamTotal\$\{i\}"/);
+  assert.match(html, /const teamEventTotals=new Map\(\)/);
+  assert.match(html, /addTeamEventTotal\(team,TAP_POLICY\.statEventDelta\(type,count\)\)/);
+  assert.match(html, /teamEventTotals\.set\(teamId,\(teamEventTotals\.get\(teamId\)\|\|0\)\+count\)/);
+  assert.match(html, /teamEventTotals\.get\(T\[team\]\.id\)\|\|0/);
+  assert.match(html, /update\(\);T\.forEach\(\(_,i\)=>renderTeamEventTotal\(i\)\)/);
+  assert.match(html, /row\.querySelector\('b'\)\.textContent=stFmt\(total\)/);
+});
+
 test('voiceover announces only the rose turbo prompt at each race start', () => {
   assert.match(html, /VL=\[\s*\{id:'intro',at:2,s:'Rositas activan el turbo',v:\[\(\)=>'Si envían rositas, se activa el turbo para que tu equipo llegue más rápido\.'\]\},\s*\]/);
   assert.doesNotMatch(html, /GIFT_TURBO_REMINDER_MS|giftTurboReminderAt/);
+});
+
+test('team changes are announced before chat and per-round announcement state is cleared', () => {
+  assert.match(html, /function enqueueTeamMove\(display,team,prev\)/);
+  assert.match(html, /if\(prev!==team\)\{moved=true;teamAnnounceAt\.set\(user,now\);try\{enqueueTeamMove/);
+  assert.match(html, /speak\(it\.say\|\|\(it\.name\+' dice: '\+it\.text\)/);
+  assert.match(html, /function voReset\(\)\{chatSide\.clear\(\);teamAnnounceAt\.clear\(\)/);
+});
+
+test('rose toggle uses server persistence and controls rose prompts', () => {
+  assert.match(html, /SRV\.get\('cluss\.askRose','1'\)/);
+  assert.match(html, /SRV\.set\('cluss\.askRose',roseOn\?'1':'0'\)/);
+  assert.match(html, /call\.percent===50&&\(vSess\.has\('turbo-rose'\)\|\|\(window\.askRoseOn&&!window\.askRoseOn\(\)\)\)/);
+  assert.match(html, /window\.askRoseOn&&\!window\.askRoseOn\(\)&&roseRaceN%2===0/);
+  assert.match(html, /w\.append\(rb,c,g\)/);
+});
+
+test('perfume gifts finish the race and honor appears above the trophy table', () => {
+  assert.match(html, /money\\s\*gun\|pistola\\s\*\(de\\s\*\)\?\(dinero\|dinheiro\)\|pistolet\\s\*a\\s\*argent\|geldpistole\|spara\[\\s-\]\?soldi\|perfume\|parfum\|profumo/);
+  assert.match(html, /\.side>#honor\{order:-1\}[\s\S]*\.side>#copas\{order:1\}/);
 });
 
 test('race reset releases round-only caches and voice queues', () => {
