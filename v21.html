@@ -880,6 +880,13 @@ const T=DUELO.map(k=>({...tournamentItem(k)})); /* copias: al cambiar de torneo 
 const S=T.map(()=>({p:0,g:0,l:0}));
 let sel=0,over=false,auto=false,tmr=null,lead=-1,viewers=1450,rs=null;
 const picks=new Map(),lastChat=new Map(),recentChatPicks=new Map();
+const roundCleanupCallbacks=new Set();
+function registerRoundCleanup(callback){roundCleanupCallbacks.add(callback)}
+function clearRoundCaches(){
+ roundCleanupCallbacks.forEach(cleanup=>{
+  try{cleanup()}catch(error){console.error('No se pudo liberar la memoria de la ronda.',error)}
+ });
+}
 let streak=0,cmbT=null;
 const wt=[];
 /* ===== CONFIG DE DIFICULTAD Y RITMO (editar solo aqui) ===== */
@@ -1137,7 +1144,7 @@ function win(i){
 /* Nueva carrera: vuelve todo a 0 y sortea velocidades pasivas nuevas */
 function reset(){
  clearTimeout(rs);sel=0;over=false;lead=-1;S.forEach(s=>{s.p=0;s.g=0;s.l=0});
- picks.clear();lastChat.clear();recentChatPicks.clear();newSpeeds();lastTick=performance.now();
+ picks.clear();lastChat.clear();recentChatPicks.clear();clearRoundCaches();newSpeeds();lastTick=performance.now();
  T.forEach((t,i)=>$('#cw'+i).setAttribute('display','none'));
  $('#win').classList.remove('show');document.querySelectorAll('.cta:not([data-local-only])').forEach(b=>{b.disabled=false;b.classList.remove('cool')});streak=0;clearTimeout(cmbT);showCombo();
  update();say('¡Y ARRANCAN LAS TORTUGAS!');
@@ -1226,9 +1233,9 @@ function setConnection(status){
 const receivedEvents=[];
 const receivedEventListeners=new Set();
 const pendingLiveEvents=[];
-const liveEventsById=new Map();
+const liveEventIds=new Set();
 const supportedLiveTypes=new Set(['member','chat','gift','like','follow','share']);
-const LIVE_DIAGNOSTIC_DURATION=10*60*1000,LIVE_DIAGNOSTIC_LIMIT=5000,liveDiagnosticLog=[];
+const LIVE_DIAGNOSTIC_DURATION=10*60*1000,LIVE_DIAGNOSTIC_LIMIT=1000,LIVE_EVENT_ID_CACHE_LIMIT=300,liveDiagnosticLog=[];
 let liveEventProcessor=null,liveSnapshotProvider=null,localEventNumber=0;
 let liveDiagnosticUntil=0,liveDiagnosticStartedAt=null,liveDiagnosticEndedAt=null,liveDiagnosticDropped=0,liveDiagnosticTimer=null;
 function notifyReceivedEvents(){receivedEventListeners.forEach(listener=>setTimeout(listener,0))}
@@ -1350,11 +1357,11 @@ function processLiveEvent(item){
 function receiveLiveEvent(payload){
  const entry=payload&&payload.entry;
  const sourceId=entry&&typeof entry==='object'&&entry.id?String(entry.id):'';
- if(sourceId&&liveEventsById.has(sourceId)){
-  const duplicate=liveEventsById.get(sourceId);
-  addLiveEventStage(duplicate,'duplicate',{ignored:true});
+ if(sourceId&&liveEventIds.has(sourceId)){
+  const duplicate=receivedEvents.find(item=>item.eventId===sourceId);
+  if(duplicate)addLiveEventStage(duplicate,'duplicate',{ignored:true});
   notifyReceivedEvents();
-  return duplicate;
+  return duplicate||null;
  }
  const item=recordReceivedEvent('update',payload);
  item.eventId=sourceId||'sse-'+(++localEventNumber);
@@ -1364,8 +1371,8 @@ function receiveLiveEvent(payload){
  item.state='queued';
  addLiveEventStage(item,'queued',{reason:liveEventProcessor?'Pendiente de procesamiento.':'Esperando que el overlay termine de inicializarse.'});
  if(sourceId){
-  liveEventsById.set(sourceId,item);
-  if(liveEventsById.size>5000)liveEventsById.delete(liveEventsById.keys().next().value);
+  liveEventIds.add(sourceId);
+  if(liveEventIds.size>LIVE_EVENT_ID_CACHE_LIMIT)liveEventIds.delete(liveEventIds.values().next().value);
  }
  if(liveEventProcessor){
   processLiveEvent(item);return item;
@@ -1914,7 +1921,7 @@ function resetCopas(){
  toast('Copas reiniciadas: todo empieza de cero','🔄');
 }
 const _reset=reset;
-reset=function(){ajustesDePartida();seen.clear();known.clear();userScore.clear();recent.forEach(l=>l.length=0);fanTurn++;gs.fill(2);T.forEach((_,i)=>{$('#ev'+i).hidden=true;heart[i]=0;renderHeart(i);$('#in'+i).style.setProperty('--s',2);renderNest(i);renderPod(i)});voReset();contrib.clear();us.clear();joined.clear();turbo.fill(0);turboPower.fill(0);giftTurboUntil.fill(0);lastMvp=null;hy.hidden=true;T.forEach((_,i)=>$('#ln'+i).classList.remove('turbo'));leads=0;sprint=false;pm=1;lastStreak=0;tk=0;$('#app').classList.remove('sprint');_reset();A.sfx('start');hud();logStat({type:'round-start',duel:DUELO});toast(T[0].n+'  ·  '+T[1].n,'💬')}; /* ronda nueva en las estadisticas */
+reset=function(){ajustesDePartida();seen.clear();known.clear();userScore.clear();recent.forEach(l=>l.length=0);fanTurn++;gs.fill(2);T.forEach((_,i)=>{$('#ev'+i).hidden=true;heart[i]=0;renderHeart(i);$('#in'+i).style.setProperty('--s',2);renderNest(i);renderPod(i)});evT.forEach(clearTimeout);evL.forEach(clearTimeout);voReset();contrib.clear();us.clear();joined.clear();turbo.fill(0);turboPower.fill(0);giftTurboUntil.fill(0);lastMvp=null;hy.hidden=true;T.forEach((_,i)=>$('#ln'+i).classList.remove('turbo'));leads=0;sprint=false;pm=1;lastStreak=0;tk=0;$('#app').classList.remove('sprint');_reset();A.sfx('start');hud();logStat({type:'round-start',duel:DUELO});toast(T[0].n+'  ·  '+T[1].n,'💬')}; /* ronda nueva en las estadisticas */
 window.tortugas.reset=reset;window.tortugas.resetCopas=resetCopas;
 const _resetTurboLimit=reset;
 reset=function(){heartLimitOffset=0;HEART_N=50;tapLevel=1;tapLevelMaxN=50;paintLevel();realEv.length=0;matchInteractionCount=0;raceStartedAt=Date.now();lastInteractionAt=raceStartedAt;lowActivityFinished=false;_resetTurboLimit();syncHeartLimit()};
@@ -2099,7 +2106,7 @@ function greet(u,t,alias){
  if(P.vo&&now-grLast>6000&&speak('Saludamos al hincha de '+cap(T[t].n)+', '+name.replace(/[_.]+/g,' '),null,false))grLast=now;
 }
 /* Don Tortu agradece cada regalo real y anuncia su avance y turbo. Cola corta para que no se pisen las voces. */
-const giftQueue=[];let giftSpeaking=false;
+const giftQueue=[];let giftSpeaking=false,giftSpeechGeneration=0;
 function giftThanksText(g){
  const en=!!(window.I18N&&window.I18N.en);
  const thank=g.gift?(en?'for sending ':'por enviar ')+(g.count>1?g.count+' ':'')+g.gift:(g.count===1?'por tu regalo':'por tus '+g.count+' regalos');
@@ -2109,8 +2116,9 @@ function giftThanksText(g){
 function speakNextGift(){
  if(giftSpeaking||!giftQueue.length)return;
  const g=giftQueue.shift(),txt=giftThanksText(g);
+ const generation=giftSpeechGeneration;
  giftSpeaking=true;
- if(P.vo&&speak(txt,null,true,undefined,()=>{giftSpeaking=false;speakNextGift()}))return;
+ if(P.vo&&speak(txt,null,true,undefined,()=>{if(generation!==giftSpeechGeneration)return;giftSpeaking=false;speakNextGift()}))return;
  giftSpeaking=false;say(txt);
  if(giftQueue.length)setTimeout(speakNextGift,0);
 }
@@ -2118,7 +2126,9 @@ function speakNextGift(){
 function giftThanks(name,t,count=1,gift=''){
  const amount=Math.max(1,Math.floor(Number(count))||1),last=giftQueue[giftQueue.length-1];
  if(last&&last.name===name&&last.t===t&&last.gift===gift)last.count+=amount;
- else giftQueue.push({name,t,count:amount,gift});
+ else if(giftQueue.length<20)giftQueue.push({name,t,count:amount,gift});
+ else if(last&&last.name==='la hinchada'&&last.t===-1)last.count+=amount;
+ else giftQueue.push({name:'la hinchada',t:-1,count:amount,gift:''});
  speakNextGift();
 }
 /* Avisos y logros de acciones reales; el avance y el turbo vienen solo del contador. */
@@ -2278,7 +2288,7 @@ function nextEngagementCall(progress,done){
  return percent===undefined?null:{percent,text:ENGAGEMENT_CALLS[percent]};
 }
 /* Voz: reinicia los temporizadores y colas del relator al empezar la ronda. */
-function voReset(){chatQueue.length=0;chatReadyAt=0;nxLast=-1e9;vT0=performance.now();vDone.clear();vRound++;vLast=-1e9;narratorLastSpoken=-1e9;narratorQueue.length=0;try{SS&&SS.cancel();A.duck(0)}catch(e){}queueNarratorIntroductions()}
+function voReset(){chatQueue.length=0;chatReadAt.clear();giftQueue.length=0;giftSpeaking=false;giftSpeechGeneration++;chatReadyAt=0;nxLast=-1e9;vT0=performance.now();vDone.clear();vRound++;vLast=-1e9;narratorLastSpoken=-1e9;narratorQueue.length=0;try{SS&&SS.cancel();A.duck(0)}catch(e){}queueNarratorIntroductions()}
 queueNarratorIntroductions();
 /* Voz: frase del relator cuando gana el equipo i (o campeon del torneo). */
 function voWin(i){const n=T[i].n[0]+T[i].n.slice(1).toLowerCase();vDone.add('final');speak(P.wins[i]>=3?'¡Tenemos campeón del torneo! '+n+' se lleva las tres copas. ¡Felicitaciones y gracias por jugar!':VW[vRound%VW.length].replace('{n}',n),null,true)}
@@ -2489,9 +2499,10 @@ const laneP=(i,fy)=>pos(document.getElementById('sv'+i),.5,fy==null?.55:fy);
 
 /* ---------- Canvas de particulas (solo corre mientras hay particulas) ---------- */
 const cv=document.createElement('canvas');cv.id='fxc';cv.setAttribute('aria-hidden','true');
-const DPR=Math.min(2,window.devicePixelRatio||1);cv.width=416*DPR;cv.height=746*DPR;app.appendChild(cv);
+const LOW_MEMORY_DEVICE=Number(navigator.deviceMemory)>0&&Number(navigator.deviceMemory)<=4;
+const DPR=Math.min(LOW_MEMORY_DEVICE?1.25:2,window.devicePixelRatio||1);cv.width=416*DPR;cv.height=746*DPR;app.appendChild(cv);
 const cx=cv.getContext('2d');cx.scale(DPR,DPR);
-const PS=[];let raf=0,lastT=0;const MAXP=420;
+const PS=[];let raf=0,lastT=0;const MAXP=LOW_MEMORY_DEVICE?180:420;
 const COLS=['#ffd34d','#e11d48','#3ddc5a','#5ec3f2','#ffffff','#ff8a1f','#a98cff'];
 /* Efectos: agrega una particula a la lista y arranca el bucle de animacion si estaba parado. */
 function add(p){if(PS.length>=MAXP)PS.shift();PS.push(p);if(!raf){lastT=performance.now();raf=requestAnimationFrame(loop)}}
@@ -2518,6 +2529,12 @@ function loop(t){
  cx.globalAlpha=1;
  if(PS.length)raf=requestAnimationFrame(loop);else{raf=0;cx.clearRect(0,0,416,746)}
 }
+function clearEffects(){
+ PS.length=0;
+ if(raf){cancelAnimationFrame(raf);raf=0}
+ cx.clearRect(0,0,416,746);
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)clearEffects()});
 const q=n=>RM?Math.ceil(n*.25):n;
 /* cañon de confeti: abanico desde (x,y) apuntando a "ang" (grados, 0=derecha, -90=arriba) */
 function cannon(x,y,ang,n,spd,spread,cols){
@@ -2714,7 +2731,7 @@ const _reset=reset;
 reset=function(){
  const had=!!document.querySelector('#win.show');
  _reset.apply(this,arguments);
- roundReset();lastM=1;PS.length=0;
+ roundReset();lastM=1;clearEffects();
  pipsSync(false);
  /* cuenta regresiva visual de 1.6 s (no bloquea el juego ni pide nada) */
  if(had&&!RM){[['3',0],['2',.4],['1',.8]].forEach(([t,d])=>setTimeout(()=>{if(!over){num(t);FA.p('tick')}},d*1000));setTimeout(()=>{if(!over){num('¡YA!',1);FA.p('go');flash('#ffd34d');T.forEach((_,k)=>{const p=laneP(k,.8);burst(p.x,p.y,T[k].c,16,160)})}},1200)}
@@ -3107,6 +3124,7 @@ handleLiveEntry=function(e){
  }catch(x){console.error(x)}
  return _h.apply(this,arguments);
 };
+const _reset=reset;reset=function(){ultimo.clear();return _reset.apply(this,arguments)};window.tortugas.reset=reset;
 })();
 </script>
 <!-- ===== PARCHE v4: CATALOGO COMPLETO DE BANDERAS (paises) dentro de este mismo HTML, sin descargas. Ver el catalogo: abrir con ?catalogo o pulsar Shift+C ===== -->
@@ -3473,6 +3491,7 @@ const nm=i=>{try{const n=T[i].n;return n[0].toUpperCase()+n.slice(1).toLowerCase
 const mostrar=h=>{while(box.children.length>=2)box.firstChild.remove();const d=document.createElement('div');d.className='it';d.innerHTML=h;box.appendChild(d);setTimeout(()=>d.remove(),4100)};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const visto=new Map(),pts=new Map(),COOL=45000; /* un reconocimiento por persona cada 45 s */
+registerRoundCleanup(()=>{visto.clear();pts.clear();box.replaceChildren()});
 const pocos=(u)=>{const t=performance.now();if(visto.has(u)&&t-visto.get(u)<COOL)return false;visto.set(u,t);return true};
 const FR={
  chat:(u,c)=>`🔥 <b>@${u}</b> es hincha de <b>${c}</b>`,
@@ -4137,6 +4156,7 @@ function paint(){try{
  });
  sizeUp();
 }catch(e){}}
+registerRoundCleanup(()=>{info.clear();last=null});
 let lastH=0;
 function sizeUp(){const h=box.offsetHeight;if(!h||h===lastH)return;lastH=h;
  document.documentElement.style.setProperty('--pnl',(h+4)+'px');dispatchEvent(new Event('resize'))}
@@ -4524,7 +4544,10 @@ render();
 /* v2: cronometro + contador de regalos van DENTRO de la fila del menu desplegable (cluss ▾ · Nv · ... cronometro · regalos), pegados a la derecha. Con el menu cerrado se ven siempre; con el menu abierto ocupan 3 celdas de la grilla. */
 #cronoRegalos{position:static;flex:0 0 auto;margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:6px;pointer-events:none}
 #topbar.cerrado .foot>#cronoRegalos{display:flex!important}
+#topbar.cerrado .foot>#resourceMeter{display:inline-flex!important}
+#topbar:not(.cerrado) .foot>#resourceMeter{grid-column:span 2}
 #topbar:not(.cerrado) .foot>#cronoRegalos{grid-column:span 3;margin-left:0}
+#resourceMeter{display:inline-flex;flex:none;align-items:center;justify-content:center;min-width:84px;padding:4px 5px;border:1px solid #53656a;border-radius:6px;background:#0b1114;color:#b8d7c8;font:700 8px/1.1 Inter,sans-serif;letter-spacing:.1px;white-space:nowrap;font-variant-numeric:tabular-nums}
 /* cronometro y contador de regalos: MISMO tamano (alto 26 px, borde 2 px, letra 15 px); solo cambia el color del borde */
 #cronoRegalos #crono,#cronoRegalos #giftTotal{box-sizing:border-box;height:26px;display:flex;align-items:center;gap:4px;padding:0 7px;border-radius:7px;background:#0b0b0b;border-style:solid;border-width:2px;font:800 15px/1 Inter,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.3px;white-space:nowrap;position:static;text-align:left;text-shadow:0 1px 2px #000}
 #cronoRegalos #crono{border-color:#5ec3f2;box-shadow:0 2px 5px rgba(0,0,0,.7),0 0 7px rgba(94,195,242,.5);color:#fff}
@@ -4538,13 +4561,33 @@ render();
 (function(){
  const g=document.getElementById('giftTotal');if(!g||document.getElementById('cronoRegalos'))return;
  const w=document.createElement('div');w.id='cronoRegalos';
+ const meter=document.createElement('span');meter.id='resourceMeter';meter.setAttribute('role','status');
+ meter.title='MEM: porcentaje del límite de heap JavaScript, si Chrome lo expone. CPU*: porcentaje del tiempo en tareas largas del hilo principal (>50 ms); no representa el uso total del procesador.';
+ meter.textContent='MEM --% · CPU* --%';
  const c=document.createElement('div');c.id='crono';c.setAttribute('role','timer');c.title='Tiempo con el overlay activo (hh:mm:ss)';
  const ic=document.createElement('i');ic.setAttribute('aria-hidden','true');ic.textContent='⏱';
  const tx=document.createElement('span');tx.id='cronoTxt';tx.textContent='00:00:00';
  c.append(ic,tx);
  const nb=document.getElementById('nivelBadge'),foot=document.querySelector('#topbar .foot')||document.querySelector('.foot');
- if(nb&&nb.parentNode)nb.after(w);else if(foot)foot.appendChild(w);else g.parentNode.insertBefore(w,g);
+ if(nb&&nb.parentNode){nb.after(meter);meter.after(w)}else if(foot){foot.append(meter,w)}else g.parentNode.insertBefore(w,g);
  w.append(c,g);
+ let longTaskMs=0,lastSample=performance.now(),hasLongTaskMetric=false;
+ if(window.PerformanceObserver&&Array.isArray(PerformanceObserver.supportedEntryTypes)&&PerformanceObserver.supportedEntryTypes.includes('longtask')){
+  try{
+   const observer=new PerformanceObserver(list=>list.getEntries().forEach(entry=>{longTaskMs+=entry.duration}));
+   observer.observe({entryTypes:['longtask']});hasLongTaskMetric=true;
+  }catch(error){console.warn('No se pudo medir la carga de tareas largas del overlay.',error)}
+ }
+ function sampleResources(){
+  const now=performance.now(),elapsed=Math.max(1,now-lastSample);lastSample=now;
+  if(document.hidden){longTaskMs=0;return}
+  const memory=performance.memory,heap=memory&&memory.jsHeapSizeLimit>0
+   ?Math.min(100,Math.round(memory.usedJSHeapSize/memory.jsHeapSizeLimit*100)):null;
+  const cpu=hasLongTaskMetric?Math.min(100,Math.round(longTaskMs/elapsed*100)):null;
+  longTaskMs=0;
+  meter.textContent='MEM '+(heap==null?'--':heap)+'% · CPU* '+(cpu==null?'--':cpu)+'%';
+ }
+ sampleResources();setInterval(sampleResources,2000);
  const t0=Date.now(),p=n=>String(n).padStart(2,'0');
  function tick(){const s=Math.max(0,Math.floor((Date.now()-t0)/1000)),t=p(Math.floor(s/3600))+':'+p(Math.floor(s%3600/60))+':'+p(s%60);if(tx.textContent!==t){tx.textContent=t;c.setAttribute('aria-label','Tiempo activo '+t)}}
  tick();setInterval(tick,1000);
@@ -4558,7 +4601,7 @@ render();
 #copas{flex:none!important;height:178px!important}
 /* HONOR de un solo puesto: avatar del ultimo que envio regalo, con su nombre y cantidad, en columna */
 #honor{padding:4px 3px 4px!important;border-width:2px!important;margin:0!important}
-#honor .hh{font-size:9px!important;margin-bottom:4px!important;letter-spacing:.6px!important}
+#honor .hh{font-size:11px!important;margin-bottom:5px!important;letter-spacing:.7px!important}
 #honor .pd{gap:0!important}
 #honor .sl{flex-direction:column!important;align-items:center!important;gap:2px!important;padding:5px 3px 3px!important;border-radius:10px!important}
 #honor .av,#honor .s1 .av{width:44px!important;height:44px!important;font-size:24px!important;border-width:3px!important}

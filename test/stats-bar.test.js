@@ -67,6 +67,22 @@ test('voiceover announces only the rose turbo prompt at each race start', () => 
   assert.doesNotMatch(html, /GIFT_TURBO_REMINDER_MS|giftTurboReminderAt/);
 });
 
+test('race reset releases round-only caches and voice queues', () => {
+  assert.match(html, /picks\.clear\(\);lastChat\.clear\(\);recentChatPicks\.clear\(\);clearRoundCaches\(\)/);
+  assert.match(html, /function voReset\(\)\{[^}]*chatReadAt\.clear\(\);giftQueue\.length=0;giftSpeaking=false;giftSpeechGeneration\+\+/);
+  assert.match(html, /registerRoundCleanup\(\(\)=>\{visto\.clear\(\);pts\.clear\(\);box\.replaceChildren\(\)\}\)/);
+  assert.match(html, /registerRoundCleanup\(\(\)=>\{info\.clear\(\);last=null\}\)/);
+  assert.match(html, /reset=function\(\)\{ultimo\.clear\(\);return _reset\.apply\(this,arguments\)\}/);
+});
+
+test('mobile overlay bounds canvas effects and shows available resource percentages', () => {
+  assert.match(html, /const LOW_MEMORY_DEVICE=Number\(navigator\.deviceMemory\)>0&&Number\(navigator\.deviceMemory\)<=4/);
+  assert.match(html, /DPR=Math\.min\(LOW_MEMORY_DEVICE\?1\.25:2/);
+  assert.match(html, /MAXP=LOW_MEMORY_DEVICE\?180:420/);
+  assert.match(html, /LIVE_DIAGNOSTIC_LIMIT=1000,LIVE_EVENT_ID_CACHE_LIMIT=300/);
+  assert.ok(html.includes("meter.textContent='MEM '+(heap==null?'--':heap)+'% · CPU* '+(cpu==null?'--':cpu)+'%'"));
+});
+
 test('statistics bar updates from real events and renders the live tap and idle values', () => {
   assert.match(html, /if\(e&&!e\.bot\)\{\s*const n=TAP_POLICY\.statEventDelta\(e\.type,e\.activityCount\)/);
   assert.match(html, /TAP_POLICY\.isInteractionEvent\(e\.type\)/);

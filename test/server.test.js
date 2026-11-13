@@ -104,7 +104,7 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.match(servedHtml, /addLiveEventStage\(item,'validation'/);
     assert.match(servedHtml, /addLiveEventStage\(item,'dispatch'/);
     assert.match(servedHtml, /addLiveEventStage\(item,'result'/);
-    assert.match(servedHtml, /liveEventsById\.has\(sourceId\)/);
+    assert.match(servedHtml, /liveEvent(?:sById|Ids)\.has\(sourceId\)/);
     assert.match(servedHtml, /window\.getLiveEventSnapshot=\(\)=>/);
     assert.match(servedHtml, /LIVE_DIAGNOSTIC_DURATION=10\*60\*1000/);
     assert.match(servedHtml, /id="toggleLiveLog"/);
