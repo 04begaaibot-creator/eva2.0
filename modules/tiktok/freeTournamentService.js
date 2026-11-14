@@ -55,31 +55,41 @@ function createFreeTournamentService({ filePath }) {
 
   try {
     const raw = fs.readFileSync(filePath, 'utf8');
-    if (raw.includes('\0')) throw new SyntaxError('El archivo del torneo libre está corrupto.');
-    const saved = JSON.parse(raw);
-    if (!saved || typeof saved !== 'object' || Array.isArray(saved)
-      || !Array.isArray(saved.teams)
-      || (saved.updatedAt !== null && typeof saved.updatedAt !== 'string')
-      || (saved.enabled !== undefined && typeof saved.enabled !== 'boolean')) {
-      throw new Error('El archivo del torneo libre no es válido.');
-    }
-    if (typeof saved.enabled === 'boolean') enabled = saved.enabled;
-    for (const savedTeam of saved.teams) {
-      const team = normalizeTeamName(savedTeam?.name);
-      if (!team || !Number.isSafeInteger(savedTeam.votes) || savedTeam.votes < 0
-        || !Array.isArray(savedTeam.userHashes)
-        || savedTeam.userHashes.some((hash) => typeof hash !== 'string' || !/^[a-f0-9]{64}$/.test(hash))) {
-        throw new Error('Un equipo guardado del torneo libre no es válido.');
+    const sanitized = raw.replace(/\u0000/g, '');
+    if (!sanitized.trim()) {
+      teams.clear();
+      updatedAt = null;
+      enabled = true;
+    } else {
+      const saved = JSON.parse(sanitized);
+      if (!saved || typeof saved !== 'object' || Array.isArray(saved)
+        || !Array.isArray(saved.teams)
+        || (saved.updatedAt !== null && typeof saved.updatedAt !== 'string')
+        || (saved.enabled !== undefined && typeof saved.enabled !== 'boolean')) {
+        throw new Error('El archivo del torneo libre no es válido.');
       }
-      teams.set(team.key, {
-        ...team,
-        votes: savedTeam.votes,
-        userHashes: [...new Set(savedTeam.userHashes)],
-      });
+      if (typeof saved.enabled === 'boolean') enabled = saved.enabled;
+      for (const savedTeam of saved.teams) {
+        const team = normalizeTeamName(savedTeam?.name);
+        if (!team || !Number.isSafeInteger(savedTeam.votes) || savedTeam.votes < 0
+          || !Array.isArray(savedTeam.userHashes)
+          || savedTeam.userHashes.some((hash) => typeof hash !== 'string' || !/^[a-f0-9]{64}$/.test(hash))) {
+          throw new Error('Un equipo guardado del torneo libre no es válido.');
+        }
+        teams.set(team.key, {
+          ...team,
+          votes: savedTeam.votes,
+          userHashes: [...new Set(savedTeam.userHashes)],
+        });
+      }
+      updatedAt = saved.updatedAt || null;
     }
-    updatedAt = saved.updatedAt || null;
   } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
+    if (error.code !== 'ENOENT') {
+      teams.clear();
+      updatedAt = null;
+      enabled = true;
+    }
   }
 
   function getStats() {

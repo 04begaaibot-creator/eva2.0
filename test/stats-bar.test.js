@@ -69,11 +69,12 @@ test('team tap counters omit the turbo badge and use the freed width for the cou
   assert.match(html, /\.hb em\{justify-content:flex-start;left:20px;right:2px/);
 });
 
-test('dynamic turbo tap limit rises at 25 percent and returns to minimum by the finish', () => {
-  assert.match(html, /LEVEL_PROGRESS_START=25,LEVEL_DESCENT_FROM=75,LEVEL_DESCENT_STEP=1\.25/);
-  assert.match(html, /progress<LEVEL_PROGRESS_START\?LEVEL_TAPS/);
-  assert.match(html, /LEVEL_MAX_TAPS-LEVEL_TAPS\*Math\.floor\(\(progress-LEVEL_DESCENT_FROM\)\/LEVEL_DESCENT_STEP\)/);
-  assert.doesNotMatch(html, /nivelBadge|tapLevelMaxN/);
+test('turbo tap limit starts at 10 and uses audience and the server multiplier for the next limit', () => {
+  assert.match(html, /let HEART_N=10,heartLimitOffset=0,liveAudienceCount=null,audienceMultiplier=10/);
+  assert.match(html, /function nextAudienceTapLimit\(\)/);
+  assert.match(html, /TAP_POLICY\.consumeTapCountWithNextLimit/);
+  assert.match(html, /game-settings/);
+  assert.doesNotMatch(html, /LEVEL_PROGRESS_START|LEVEL_MAX_TAPS/);
 });
 
 test('each team shows its live-wide event total in compact K and M notation', () => {
@@ -120,6 +121,12 @@ test('activity policy fallback repairs a cached frozen policy missing team assig
 test('voiceover announces only the rose turbo prompt at each race start', () => {
   assert.match(html, /VL=\[\s*\{id:'intro',at:2,s:'Rositas activan el turbo',v:\[\(\)=>'Si envían rositas, se activa el turbo para que tu equipo llegue más rápido\.'\]\},\s*\]/);
   assert.doesNotMatch(html, /GIFT_TURBO_REMINDER_MS|giftTurboReminderAt/);
+});
+
+test('voice prompts the supported team in chat at each 15% race milestone', () => {
+  assert.match(html, /PROGRESS_MILESTONES=\[15,30,45,60,75,90\]/);
+  assert.match(html, /const key='progress-'\+team\+'-'\+percent/);
+  assert.match(html, /Comenta en el chat el club que apoyas para ayudarle a avanzar/);
 });
 
 test('team changes are announced before chat and per-round announcement state is cleared', () => {
@@ -171,10 +178,14 @@ test('real tap, turbo, and gift calculations run through the browser activity po
   assert.match(html, /window\.recordLiveTap\(team,tapCount\)/);
   assert.match(html, /window\.recordLiveTap=\(team,count\)=>heartAdd\(team,count\)/);
   assert.doesNotMatch(html, /const taps=TAP_POLICY\.tapEventDelta\(type,n\)/);
-  assert.match(html, /TAP_POLICY\.consumeTapCount\(heart\[t\],n,HEART_N\)/);
+  assert.match(html, /TAP_POLICY\.consumeTapCountWithNextLimit/);
   assert.match(html, /TAP_POLICY\.giftProgress\(gifts,GIFT_PROGRESS\)/);
   assert.match(html, /TAP_POLICY\.giftTurboDuration\(count,GIFT_TURBO_MS\)/);
   assert.match(html, /LS\.set\(ST_KEY,rest\)/);
+});
+
+test('featured gift member is displayed without the crown icon', () => {
+  assert.doesNotMatch(html, /<span class="cr">👑<\/span>/);
 });
 
 test('fan avatars and their live events use the same left or right side', () => {

@@ -32,6 +32,23 @@
         + Math.max(0, Math.floor(Number(added) || 0));
       return { remaining: total % threshold, activations: Math.floor(total / threshold) };
     },
+    consumeTapCountWithNextLimit(current, added, limit, nextLimit) {
+      const threshold = Math.floor(Number(limit));
+      const followingThreshold = Math.floor(Number(nextLimit));
+      if (!Number.isFinite(threshold) || threshold < 1
+        || !Number.isFinite(followingThreshold) || followingThreshold < 1) {
+        return { remaining: 0, activations: 0, nextLimit: threshold };
+      }
+      const total = Math.max(0, Math.floor(Number(current) || 0))
+        + Math.max(0, Math.floor(Number(added) || 0));
+      if (total < threshold) return { remaining: total, activations: 0, nextLimit: threshold };
+      const afterFirst = total - threshold;
+      return {
+        remaining: afterFirst % followingThreshold,
+        activations: 1 + Math.floor(afterFirst / followingThreshold),
+        nextLimit: followingThreshold,
+      };
+    },
     giftProgress(activityCount, progressPerGift) {
       return statEventDelta('gift', activityCount) * progressPerGift;
     },

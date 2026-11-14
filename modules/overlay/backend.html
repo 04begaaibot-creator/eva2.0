@@ -168,6 +168,12 @@
     .tool-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; margin-top: 14px; }
     .tool-actions .button { min-height: 40px; }
     .tool-note { margin: 12px 0 0; color: var(--muted); font-size: 12px; }
+    .whatsapp-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .whatsapp-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .whatsapp-form label { display: grid; gap: 6px; color: #c5d0d2; font-size: 12px; font-weight: 650; }
+    .whatsapp-form .full { grid-column: 1 / -1; }
+    #whatsapp-status, #overlay-client-status, #whatsapp-message { min-height: 18px; margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    #whatsapp-message { color: #ff9aa1; }
     .footer { margin-top: 22px; text-align: center; }
     .footer a { color: #9dafb2; font-size: 12px; text-decoration: none; }
     .footer a:hover { color: #fff; }
@@ -177,6 +183,8 @@
       .account-form { grid-template-columns: 1fr; }
       .account-form label { grid-column: auto; }
       .card-heading { align-items: flex-start; }
+      .whatsapp-form { grid-template-columns: 1fr; }
+      .whatsapp-form .full { grid-column: auto; }
       .stats-table th, .stats-table td { padding: 9px 10px; }
     }
   </style>
@@ -222,7 +230,22 @@
           <div class="tools-metrics">
             <div class="tools-metric"><span>Cronómetro del servidor</span><strong id="server-timer">00:00:00</strong></div>
             <div class="tools-metric"><span>Regalos recibidos</span><strong id="server-gifts">0</strong></div>
+            <div class="tools-metric"><span>Audiencia actual</span><strong id="server-audience">—</strong></div>
+            <div class="tools-metric"><span>Multiplicador guardado</span><strong id="server-audience-multiplier">10×</strong></div>
           </div>
+          <form id="game-settings-form" class="whatsapp-form">
+            <label for="audience-multiplier">Multiplicador de audiencia
+              <input id="audience-multiplier" name="audienceMultiplier" type="number" min="1" max="1000" step="1" value="10" required>
+            </label>
+            <label for="gift-turbo-progress">Avance total del turbo por regalo (%)
+              <input id="gift-turbo-progress" name="giftTurboProgress" type="number" min="0" max="100" step="0.1" value="6" required>
+            </label>
+            <label for="tap-turbo-progress">Avance total del turbo por límite de taps (%)
+              <input id="tap-turbo-progress" name="tapTurboProgress" type="number" min="0" max="100" step="0.1" value="3" required>
+            </label>
+            <button class="button" type="submit">Guardar ajustes</button>
+          </form>
+          <p id="game-settings-message" role="status" class="tool-note">El primer límite de cada partida es 10 taps; después, el servidor calcula audiencia × multiplicador. También controla el avance de los turbos por regalo y por límite.</p>
           <div class="tool-actions">
             <button class="button secondary" type="button" data-command="language">🌐 Cambiar idioma</button>
             <button class="button secondary" type="button" data-command="narrator">🗣️ Narrador Don Tortu</button>
@@ -241,6 +264,38 @@
           </div>
           <p id="tools-message" role="status" class="tool-note"></p>
           <p class="tool-note">Los comandos se envían por el servidor al overlay activo. El cronómetro y los regalos se comparten y solo se reinician con el botón.</p>
+        </div>
+      </section>
+      <section class="card" aria-labelledby="whatsapp-heading">
+        <div class="card-heading">
+          <div>
+            <h2 id="whatsapp-heading">Alertas por WhatsApp</h2>
+            <p id="whatsapp-status" role="status">Cargando configuración…</p>
+            <p id="overlay-client-status">Estado del overlay Android: esperando señal.</p>
+          </div>
+          <div class="whatsapp-actions">
+            <button id="whatsapp-enable" class="button secondary" type="button" aria-pressed="false">Activar alertas</button>
+            <button id="whatsapp-settings-toggle" class="button secondary" type="button" aria-expanded="false" aria-controls="whatsapp-panel">Configurar WhatsApp</button>
+          </div>
+        </div>
+        <div id="whatsapp-panel" hidden>
+          <form id="whatsapp-form" class="whatsapp-form">
+            <label class="full" for="whatsapp-api-url">URL base de Evolution API
+              <input id="whatsapp-api-url" name="apiUrl" type="url" autocomplete="url" placeholder="https://evolution.example.com" required>
+            </label>
+            <label for="whatsapp-instance">Instancia
+              <input id="whatsapp-instance" name="instance" autocomplete="off" placeholder="mi-instancia" required>
+            </label>
+            <label for="whatsapp-phone">Número destino con código de país
+              <input id="whatsapp-phone" name="phoneNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="595..." required>
+            </label>
+            <label class="full" for="whatsapp-api-key">API Key
+              <input id="whatsapp-api-key" name="apiKey" type="password" autocomplete="new-password" placeholder="Pega la API Key de Evolution">
+            </label>
+            <button class="button full" type="submit">Guardar configuración</button>
+          </form>
+          <p class="tool-note">Se enviará un aviso por cada evento de regalo y otro si el overlay Android deja de reportar (por ejemplo, al apagarse la pantalla). Si las alertas están desactivadas, no se envía nada.</p>
+          <p id="whatsapp-message" role="status"></p>
         </div>
       </section>
       <section class="card" aria-labelledby="stats-heading">
@@ -296,7 +351,26 @@
     const toolsMessage = document.querySelector('#tools-message');
     const serverTimer = document.querySelector('#server-timer');
     const serverGifts = document.querySelector('#server-gifts');
+    const serverAudience = document.querySelector('#server-audience');
+    const serverAudienceMultiplier = document.querySelector('#server-audience-multiplier');
+    const gameSettingsForm = document.querySelector('#game-settings-form');
+    const audienceMultiplierInput = document.querySelector('#audience-multiplier');
+    const giftTurboProgressInput = document.querySelector('#gift-turbo-progress');
+    const tapTurboProgressInput = document.querySelector('#tap-turbo-progress');
+    const gameSettingsMessage = document.querySelector('#game-settings-message');
+    const whatsappForm = document.querySelector('#whatsapp-form');
+    const whatsappApiUrl = document.querySelector('#whatsapp-api-url');
+    const whatsappInstance = document.querySelector('#whatsapp-instance');
+    const whatsappPhone = document.querySelector('#whatsapp-phone');
+    const whatsappApiKey = document.querySelector('#whatsapp-api-key');
+    const whatsappEnable = document.querySelector('#whatsapp-enable');
+    const whatsappSettingsToggle = document.querySelector('#whatsapp-settings-toggle');
+    const whatsappPanel = document.querySelector('#whatsapp-panel');
+    const whatsappStatus = document.querySelector('#whatsapp-status');
+    const overlayClientStatus = document.querySelector('#overlay-client-status');
+    const whatsappMessage = document.querySelector('#whatsapp-message');
     let gameToolsState = { timerStartedAt: Date.now(), giftCount: 0 };
+    let whatsappConfig = { enabled: false, apiKeyConfigured: false };
     function showStatus(state) {
       status.textContent = `${state.status || 'desconectado'}${state.username ? ` (@${state.username})` : ''}`;
       statusIndicator.classList.toggle('connected', Boolean(state.connected));
@@ -306,17 +380,117 @@
       );
     }
 
-    function renderGameTools(state) {
+    function renderGameTools(state, forceSettings = false) {
       if (!Number.isSafeInteger(state?.timerStartedAt) || !Number.isSafeInteger(state?.giftCount)) return;
       gameToolsState = state;
       serverGifts.textContent = state.giftCount.toLocaleString('es-PY');
+      renderGameSettings({
+        count: null,
+        audienceMultiplier: state.audienceMultiplier,
+        giftTurboProgress: state.giftTurboProgress,
+        tapTurboProgress: state.tapTurboProgress,
+      }, forceSettings);
       renderServerTimer();
+    }
+
+    function renderGameSettings(state, forceSettings = false) {
+      if (state?.count !== null && state?.count !== undefined) {
+        serverAudience.textContent = Number.isSafeInteger(state.count)
+          ? state.count.toLocaleString('es-PY')
+          : '—';
+      }
+      if (forceSettings || !gameSettingsForm.contains(document.activeElement)) {
+        if (Number.isSafeInteger(state?.audienceMultiplier)) {
+          audienceMultiplierInput.value = String(state.audienceMultiplier);
+          serverAudienceMultiplier.textContent = `${state.audienceMultiplier}×`;
+        }
+        if (Number.isFinite(state?.giftTurboProgress)) {
+          giftTurboProgressInput.value = String(state.giftTurboProgress);
+        }
+        if (Number.isFinite(state?.tapTurboProgress)) {
+          tapTurboProgressInput.value = String(state.tapTurboProgress);
+        }
+      }
     }
 
     function renderServerTimer() {
       const elapsed = Math.max(0, Math.floor((Date.now() - gameToolsState.timerStartedAt) / 1000));
       const pad = (value) => String(value).padStart(2, '0');
       serverTimer.textContent = `${pad(Math.floor(elapsed / 3600))}:${pad(Math.floor((elapsed % 3600) / 60))}:${pad(elapsed % 60)}`;
+    }
+
+    function renderWhatsAppConfig(config) {
+      whatsappConfig = config;
+      whatsappApiUrl.value = config.apiUrl || '';
+      whatsappInstance.value = config.instance || '';
+      whatsappPhone.value = config.phoneNumber || '';
+      whatsappApiKey.value = '';
+      whatsappApiKey.required = !config.apiKeyConfigured;
+      whatsappEnable.textContent = config.enabled ? 'Desactivar alertas' : 'Activar alertas';
+      whatsappEnable.setAttribute('aria-pressed', String(config.enabled));
+      whatsappStatus.textContent = `Alertas ${config.enabled ? 'ACTIVADAS' : 'DESACTIVADAS'}` +
+        ` · API Key ${config.apiKeyConfigured ? 'guardada' : 'sin configurar'}`;
+      if (config.lastError) whatsappMessage.textContent = config.lastError;
+      if (config.lastSentAt) whatsappMessage.textContent = `Último aviso enviado: ${new Date(config.lastSentAt).toLocaleString()}`;
+    }
+
+    function renderOverlayStatus(state) {
+      if (!state?.online) {
+        const lastSeen = state?.lastSeenAt
+          ? ` Última señal: ${new Date(state.lastSeenAt).toLocaleString()}.`
+          : '';
+        overlayClientStatus.textContent = `Estado del overlay Android: sin señal.${lastSeen}`;
+        return;
+      }
+      overlayClientStatus.textContent = `Estado del overlay Android: conectado (señal ${new Date(state.lastSeenAt).toLocaleTimeString()}).`;
+    }
+
+    async function loadWhatsAppSettings() {
+      const [configResponse, overlayResponse] = await Promise.all([
+        fetch('/api/whatsapp/config'),
+        fetch('/api/game-tools/overlay-status'),
+      ]);
+      const config = await configResponse.json();
+      const overlay = await overlayResponse.json();
+      if (!configResponse.ok || !overlayResponse.ok) {
+        throw new Error(config.message || overlay.message || 'No se pudo cargar WhatsApp.');
+      }
+      renderWhatsAppConfig(config);
+      renderOverlayStatus(overlay);
+    }
+
+    async function saveWhatsAppSettings(event) {
+      event.preventDefault();
+      whatsappMessage.textContent = '';
+      const response = await fetch('/api/whatsapp/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiUrl: whatsappApiUrl.value,
+          instance: whatsappInstance.value,
+          phoneNumber: whatsappPhone.value,
+          apiKey: whatsappApiKey.value,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'No se pudo guardar WhatsApp.');
+      renderWhatsAppConfig(result.config);
+      whatsappMessage.textContent = 'Configuración guardada en el servidor.';
+    }
+
+    async function toggleWhatsAppNotifications() {
+      whatsappMessage.textContent = '';
+      const response = await fetch('/api/whatsapp/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !whatsappConfig.enabled }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'No se pudo cambiar el estado de las alertas.');
+      renderWhatsAppConfig(result.config);
+      whatsappMessage.textContent = result.config.enabled
+        ? 'Alertas de WhatsApp activadas.'
+        : 'Alertas de WhatsApp desactivadas.';
     }
 
     async function sendGameCommand(command) {
@@ -338,6 +512,24 @@
       if (!response.ok) throw new Error(result.message || 'No se pudieron reiniciar los contadores.');
       renderGameTools(result);
       toolsMessage.textContent = 'Cronómetro y contador de regalos reiniciados.';
+    }
+
+    async function saveGameSettings(event) {
+      event.preventDefault();
+      gameSettingsMessage.textContent = '';
+      const response = await fetch('/api/game-tools/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audienceMultiplier: Number(audienceMultiplierInput.value),
+          giftTurboProgress: Number(giftTurboProgressInput.value),
+          tapTurboProgress: Number(tapTurboProgressInput.value),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'No se pudieron guardar los ajustes.');
+      renderGameTools(result, true);
+      gameSettingsMessage.textContent = 'Ajustes guardados en el servidor.';
     }
 
     async function loadConfiguration() {
@@ -449,6 +641,21 @@
     document.querySelector('#reset-game-tools').addEventListener('click', () => {
       resetGameTools().catch((error) => { toolsMessage.textContent = error.message; });
     });
+    gameSettingsForm.addEventListener('submit', (event) => {
+      saveGameSettings(event).catch((error) => { gameSettingsMessage.textContent = error.message; });
+    });
+    whatsappForm.addEventListener('submit', (event) => {
+      saveWhatsAppSettings(event).catch((error) => { whatsappMessage.textContent = error.message; });
+    });
+    whatsappEnable.addEventListener('click', () => {
+      toggleWhatsAppNotifications().catch((error) => { whatsappMessage.textContent = error.message; });
+    });
+    whatsappSettingsToggle.addEventListener('click', () => {
+      const isOpening = whatsappPanel.hidden;
+      whatsappPanel.hidden = !isOpening;
+      whatsappSettingsToggle.setAttribute('aria-expanded', String(isOpening));
+      whatsappSettingsToggle.textContent = isOpening ? 'Ocultar configuración' : 'Configurar WhatsApp';
+    });
     setInterval(renderServerTimer, 1000);
 
     const source = new EventSource('/api/events');
@@ -460,6 +667,9 @@
     });
     const toolsSource = new EventSource('/api/game-tools/events');
     toolsSource.addEventListener('game-tools', (event) => renderGameTools(JSON.parse(event.data)));
+    toolsSource.addEventListener('game-settings', (event) => renderGameSettings(JSON.parse(event.data)));
+    toolsSource.addEventListener('overlay-status', (event) => renderOverlayStatus(JSON.parse(event.data)));
+    toolsSource.addEventListener('whatsapp-status', (event) => renderWhatsAppConfig(JSON.parse(event.data)));
     fetch('/api/game-tools')
       .then(async (response) => {
         const result = await response.json();
@@ -468,6 +678,7 @@
       })
       .catch((error) => { toolsMessage.textContent = error.message; });
     loadConfiguration().catch((error) => { message.textContent = error.message; });
+    loadWhatsAppSettings().catch((error) => { whatsappMessage.textContent = error.message; });
   </script>
 </body>
 </html>

@@ -36,6 +36,24 @@ test('tap counter retains remainder and activates turbo once per completed thres
   assert.deepEqual(policy.consumeTapCount(25, 25, 0), { remaining: 0, activations: 0 });
 });
 
+test('audience-based tap thresholds use the new limit for each following activation', () => {
+  assert.deepEqual(policy.consumeTapCountWithNextLimit(0, 9, 10, 30), {
+    remaining: 9,
+    activations: 0,
+    nextLimit: 10,
+  });
+  assert.deepEqual(policy.consumeTapCountWithNextLimit(9, 31, 10, 30), {
+    remaining: 0,
+    activations: 2,
+    nextLimit: 30,
+  });
+  assert.deepEqual(policy.consumeTapCountWithNextLimit(0, 100, 10, 30), {
+    remaining: 0,
+    activations: 4,
+    nextLimit: 30,
+  });
+});
+
 test('each real gift advances the race and extends turbo without affecting tap count', () => {
   assert.equal(policy.giftProgress(3, 10), 30);
   assert.equal(policy.giftTurboDuration(3, 15000), 45000);

@@ -9,6 +9,7 @@ const { createWebserver, startServer } = require('../server');
 
 function createMonitorService() {
   let eventListener;
+  let audienceCountListener;
   let statusListener;
   const service = {
     state: { username: '', status: 'idle', isConnected: false, error: '' },
@@ -16,6 +17,10 @@ function createMonitorService() {
     subscribeToEvents(listener) {
       eventListener = listener;
       return () => { eventListener = null; };
+    },
+    subscribeToAudienceCount(listener) {
+      audienceCountListener = listener;
+      return () => { audienceCountListener = null; };
     },
     subscribeToStatus(listener) {
       statusListener = listener;
@@ -33,6 +38,9 @@ function createMonitorService() {
     refreshRetryWindow() {},
     emit(entry) {
       eventListener(entry);
+    },
+    emitAudienceCount(count) {
+      if (audienceCountListener) audienceCountListener(count);
     },
   };
   return service;
@@ -90,6 +98,9 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.match(backendHtml, /id="tools-toggle"/);
     assert.match(backendHtml, /data-command="reset-cups"/);
     assert.match(backendHtml, /data-command="refresh"/);
+    assert.match(backendHtml, /id="whatsapp-enable"/);
+    assert.match(backendHtml, /id="whatsapp-form"/);
+    assert.match(backendHtml, /id="game-settings-form"/);
     assert.match(backendHtml, /\/api\/game-tools\/reset/);
     assert.equal(monitorService.state.isConnected, false, 'opening the backend must not connect TikTok');
 
@@ -104,6 +115,8 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.match(servedHtml, /source\.addEventListener\('update'/);
     assert.match(servedHtml, /toolsSource\.addEventListener\('game-command'/);
     assert.match(servedHtml, /if\(command==='refresh'\)\{location\.reload\(\);return\}/);
+    assert.match(servedHtml, /\/api\/game-tools\/overlay-heartbeat/);
+    assert.match(servedHtml, /toolsSource\.addEventListener\('game-settings'/);
     assert.doesNotMatch(servedHtml, /button\.id='bArch'|button\.id='bLiveEvents'/);
     assert.doesNotMatch(servedHtml, /b2\.title=need\?/);
     assert.match(servedHtml, /fetch\('\/api\/connect'/);
@@ -179,6 +192,25 @@ test('shares server game tools and gift counts across clients until manually res
     const initial = await fetch(`${baseUrl}/api/game-tools`).then((response) => response.json());
     assert.equal(initial.giftCount, 0);
     assert.ok(Number.isSafeInteger(initial.timerStartedAt));
+    assert.equal(initial.audienceMultiplier, 10);
+    assert.equal(initial.giftTurboProgress, 6);
+    assert.equal(initial.tapTurboProgress, 3);
+
+    const settingsResponse = await fetch(`${baseUrl}/api/game-tools/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audienceMultiplier: 6,
+        giftTurboProgress: 8.5,
+        tapTurboProgress: 4,
+      }),
+    });
+    assert.equal(settingsResponse.status, 200);
+    const gameSettings = await settingsResponse.json();
+    assert.equal(gameSettings.audienceMultiplier, 6);
+    assert.equal(gameSettings.giftTurboProgress, 8.5);
+    assert.equal(gameSettings.tapTurboProgress, 4);
+    monitorService.emitAudienceCount(12);
 
     const eventResponse = await fetch(`${baseUrl}/api/game-tools/events`);
     reader = eventResponse.body.getReader();
@@ -219,6 +251,9 @@ test('shares server game tools and gift counts across clients until manually res
     const reset = await fetch(`${baseUrl}/api/game-tools/reset`, { method: 'POST' })
       .then((response) => response.json());
     assert.equal(reset.giftCount, 0);
+    assert.equal(reset.audienceMultiplier, 6, 'manual resets must preserve the server multiplier');
+    assert.equal(reset.giftTurboProgress, 8.5);
+    assert.equal(reset.tapTurboProgress, 4);
     assert.ok(reset.timerStartedAt >= initial.timerStartedAt);
     const { ok, ...savedReset } = reset;
     assert.equal(ok, true);
@@ -228,6 +263,125 @@ test('shares server game tools and gift counts across clients until manually res
     );
   } finally {
     if (reader) await reader.cancel();
+    await close(server);
+  }
+});
+
+test('sends WhatsApp alerts only when enabled and tracks overlay visibility', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tortu-whatsapp-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const monitorService = createMonitorService();
+  const requests = [];
+  const { server } = createWebserver({
+    configurationPath: path.join(directory, 'config.json'),
+    overlayDataPath: path.join(directory, 'overlay'),
+    monitorService,
+    whatsappFetch: async (url, options) => {
+      requests.push({ url, options });
+      return { ok: true, status: 200 };
+    },
+  });
+  const baseUrl = await listen(server);
+
+  try {
+    const configResponse = await fetch(`${baseUrl}/api/whatsapp/config`);
+    const initialConfig = await configResponse.json();
+    assert.equal(initialConfig.enabled, false);
+    assert.equal(initialConfig.apiKeyConfigured, false);
+    assert.equal(JSON.stringify(initialConfig).includes('secret-key'), false);
+
+    const saveResponse = await fetch(`${baseUrl}/api/whatsapp/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiUrl: 'https://evolution.example.com/',
+        instance: 'tortu live',
+        apiKey: 'secret-key',
+        phoneNumber: '+595981234567',
+      }),
+    });
+    assert.equal(saveResponse.status, 400, 'instance names containing spaces are rejected');
+
+    const validSaveResponse = await fetch(`${baseUrl}/api/whatsapp/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiUrl: 'https://evolution.example.com/',
+        instance: 'tortu-live',
+        apiKey: 'secret-key',
+        phoneNumber: '+595981234567',
+      }),
+    });
+    assert.equal(validSaveResponse.status, 200);
+    const savedConfig = await validSaveResponse.json();
+    assert.equal(savedConfig.config.apiKeyConfigured, true);
+    assert.equal(JSON.stringify(savedConfig).includes('secret-key'), false);
+
+    monitorService.emit({
+      type: 'gift',
+      activityCount: 2,
+      giftName: 'Rosa',
+      username: 'viewer',
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(requests.length, 0, 'disabled alerts must not call Evolution API');
+
+    const enableResponse = await fetch(`${baseUrl}/api/whatsapp/notifications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: true }),
+    });
+    assert.equal(enableResponse.status, 200);
+    monitorService.emit({
+      type: 'gift',
+      activityCount: 2,
+      giftName: 'Rosa',
+      username: 'viewer',
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(requests.length, 1);
+    assert.equal(
+      requests[0].url,
+      'https://evolution.example.com/message/sendText/tortu-live',
+    );
+    assert.equal(requests[0].options.headers.apikey, 'secret-key');
+    assert.deepEqual(JSON.parse(requests[0].options.body), {
+      number: '595981234567',
+      text: '🎁 @viewer envió Rosa x2 en TikTok LIVE.',
+    });
+
+    const online = await fetch(`${baseUrl}/api/game-tools/overlay-heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: 'android-overlay-01', visible: true }),
+    }).then((response) => response.json());
+    assert.equal(online.status.online, true);
+    const offline = await fetch(`${baseUrl}/api/game-tools/overlay-heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: 'android-overlay-01', visible: false }),
+    }).then((response) => response.json());
+    assert.equal(offline.status.online, false);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(requests.length, 2);
+    assert.match(JSON.parse(requests[1].options.body).text, /overlay de Android dejó de reportar/);
+
+    await fetch(`${baseUrl}/api/whatsapp/notifications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: false }),
+    });
+    monitorService.emit({ type: 'gift', activityCount: 1, giftName: 'Rosa' });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(requests.length, 2, 'disabled alerts must stop future messages');
+
+    const savedOnDisk = JSON.parse(fs.readFileSync(
+      path.join(directory, 'whatsapp-notifications.json'),
+      'utf8',
+    ));
+    assert.equal(savedOnDisk.enabled, false);
+    assert.equal(savedOnDisk.apiKey, 'secret-key');
+  } finally {
     await close(server);
   }
 });

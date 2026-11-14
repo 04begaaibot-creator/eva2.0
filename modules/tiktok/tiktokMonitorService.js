@@ -55,6 +55,7 @@ function createTikTokMonitorService({
     connectionEventListeners: new Map(),
   };
   const activityListeners = new Set();
+  const audienceCountListeners = new Set();
   const statusListeners = new Set();
   const recentEventIds = new Map();
   const giftComboCounts = new Map();
@@ -250,7 +251,7 @@ function createTikTokMonitorService({
 
     for (const [eventName, listener] of listeners) {
       connection.off(eventName, listener);
-      if (state.enabledEvents.has(eventName)) {
+      if (eventName === WebcastEvent.ROOM_USER || state.enabledEvents.has(eventName)) {
         connection.on(eventName, listener);
       }
     }
@@ -313,6 +314,14 @@ function createTikTokMonitorService({
         updateEventFeedState();
       });
     }
+    listeners.set(WebcastEvent.ROOM_USER, (payload) => {
+      if (state.connection !== connection || !payload || typeof payload !== 'object') return;
+      const count = Number(
+        payload.totalUser ?? payload.totalUserCount ?? payload.viewerCount ?? payload.userCount,
+      );
+      if (!Number.isSafeInteger(count) || count < 0) return;
+      for (const listener of audienceCountListeners) listener(count);
+    });
 
     state.connectionEventListeners.set(connection, listeners);
     applyEventSubscriptions(connection);
@@ -627,6 +636,12 @@ function createTikTokMonitorService({
     return () => statusListeners.delete(listener);
   }
 
+  function subscribeToAudienceCount(listener) {
+    if (typeof listener !== 'function') throw new Error('El suscriptor de audiencia debe ser una función.');
+    audienceCountListeners.add(listener);
+    return () => audienceCountListeners.delete(listener);
+  }
+
   return {
     state,
     connectUser,
@@ -637,6 +652,7 @@ function createTikTokMonitorService({
     getAvailableEventsPayload,
     getEventFeed: () => updateEventFeedState(),
     subscribeToEvents,
+    subscribeToAudienceCount,
     subscribeToStatus,
   };
 }

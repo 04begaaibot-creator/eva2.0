@@ -13,19 +13,27 @@ function createCommentArchiveService({ filePath }) {
 
   try {
     const raw = fs.readFileSync(filePath, 'utf8');
-    if (raw.includes('\0')) throw new SyntaxError('El archivo de comentarios está corrupto.');
-    const saved = JSON.parse(raw);
-    if (!saved || typeof saved !== 'object' || Array.isArray(saved)
-      || !Array.isArray(saved.comments)
-      || (saved.updatedAt !== null && typeof saved.updatedAt !== 'string')
-      || saved.comments.some((comment) => !comment || typeof comment !== 'object'
-        || typeof comment.text !== 'string' || typeof comment.time !== 'string')) {
-      throw new Error('El archivo de comentarios no es válido.');
+    const sanitized = raw.replace(/\u0000/g, '');
+    if (!sanitized.trim()) {
+      comments = [];
+      updatedAt = null;
+    } else {
+      const saved = JSON.parse(sanitized);
+      if (!saved || typeof saved !== 'object' || Array.isArray(saved)
+        || !Array.isArray(saved.comments)
+        || (saved.updatedAt !== null && typeof saved.updatedAt !== 'string')
+        || saved.comments.some((comment) => !comment || typeof comment !== 'object'
+          || typeof comment.text !== 'string' || typeof comment.time !== 'string')) {
+        throw new Error('El archivo de comentarios no es válido.');
+      }
+      comments = saved.comments.map((comment) => ({ time: comment.time, text: comment.text }));
+      updatedAt = saved.updatedAt || null;
     }
-    comments = saved.comments.map((comment) => ({ time: comment.time, text: comment.text }));
-    updatedAt = saved.updatedAt || null;
   } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
+    if (error.code !== 'ENOENT') {
+      comments = [];
+      updatedAt = null;
+    }
   }
 
   function getArchive() {

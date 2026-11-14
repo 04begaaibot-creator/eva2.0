@@ -13,6 +13,7 @@ function createTikTokModule({
   stream,
   monitorService = createTikTokMonitorService(),
   onEvent = () => {},
+  onAudienceCount = () => {},
   configurationPath = process.env.TIKTOK_CONFIG_PATH
     || path.join(__dirname, '..', '..', 'data', 'tiktok', 'config.json'),
   commentStatsPath = process.env.TIKTOK_COMMENT_STATS_PATH,
@@ -166,11 +167,15 @@ function createTikTokModule({
   }
 
   const unsubscribeEvents = monitorService.subscribeToEvents(handleEvent);
+  const unsubscribeAudienceCount = monitorService.subscribeToAudienceCount
+    ? monitorService.subscribeToAudienceCount(onAudienceCount)
+    : () => {};
   const unsubscribeStatus = monitorService.subscribeToStatus((status) => {
     state.connected = Boolean(status.isConnected);
     state.status = status.status;
     state.error = status.error || '';
     state.username = status.username || username;
+    if (!state.connected) onAudienceCount(null);
     publish('status', { ...state });
   });
 
@@ -258,6 +263,7 @@ function createTikTokModule({
     registerRoutes,
     close() {
       unsubscribeEvents();
+      unsubscribeAudienceCount();
       unsubscribeStatus();
       try {
         commentArchive.close();

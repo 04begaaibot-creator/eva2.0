@@ -17,6 +17,7 @@ function createWebserver({
   overlayDataPath = process.env.TIKTOK_OVERLAY_DATA_PATH,
   defaultUsername = process.env.TIKTOK_USERNAME || '',
   monitorService = createTikTokMonitorService(),
+  whatsappFetch = globalThis.fetch,
 } = {}) {
   const app = express();
   const server = createServer(app);
@@ -27,11 +28,17 @@ function createWebserver({
     directoryPath: overlayDataPath || path.join(path.dirname(configurationPath), 'overlay'),
     legacyChatArchivePath: savedCommentArchivePath,
   });
-  const gameTools = createGameToolsService({ persistence, stream: eventStream });
+  const gameTools = createGameToolsService({
+    persistence,
+    stream: eventStream,
+    notificationConfigPath: path.join(path.dirname(configurationPath), 'whatsapp-notifications.json'),
+    fetchImpl: whatsappFetch,
+  });
   const tiktok = createTikTokModule({
     stream: eventStream,
     monitorService,
     onEvent: gameTools.recordEvent,
+    onAudienceCount: gameTools.setAudienceCount,
     configurationPath,
     commentStatsPath: commentStatsPath
       || path.join(path.dirname(configurationPath), 'comment-stats.json'),
@@ -67,6 +74,7 @@ function createWebserver({
   });
 
   server.on('close', () => {
+    gameTools.close();
     tiktok.close();
     eventStream.close();
   });

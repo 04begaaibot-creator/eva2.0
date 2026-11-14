@@ -35,20 +35,23 @@ function createRecentUsersService({ filePath }) {
   let updatedAt = null;
   try {
     const raw = fs.readFileSync(filePath, 'utf8');
-    if (raw.includes('\0')) {
-      throw new Error('El archivo de usuarios recientes está corrupto.');
+    const sanitized = raw.replace(/\u0000/g, '');
+    if (!sanitized.trim()) {
+      users = [];
+      updatedAt = null;
+    } else {
+      const saved = JSON.parse(sanitized);
+      if (!saved || typeof saved !== 'object' || Array.isArray(saved)
+        || !Array.isArray(saved.users)) {
+        throw new Error('El archivo de usuarios recientes no es válido.');
+      }
+      users = normalizeUsers(saved.users);
+      if (!users) throw new Error('El archivo de usuarios recientes no es válido.');
+      if (saved.updatedAt !== undefined && typeof saved.updatedAt !== 'string') {
+        throw new Error('La fecha de usuarios recientes guardada no es válida.');
+      }
+      updatedAt = saved.updatedAt || null;
     }
-    const saved = JSON.parse(raw);
-    if (!saved || typeof saved !== 'object' || Array.isArray(saved)
-      || !Array.isArray(saved.users)) {
-      throw new Error('El archivo de usuarios recientes no es válido.');
-    }
-    users = normalizeUsers(saved.users);
-    if (!users) throw new Error('El archivo de usuarios recientes no es válido.');
-    if (saved.updatedAt !== undefined && typeof saved.updatedAt !== 'string') {
-      throw new Error('La fecha de usuarios recientes guardada no es válida.');
-    }
-    updatedAt = saved.updatedAt || null;
   } catch (error) {
     users = [];
     updatedAt = null;

@@ -30,6 +30,7 @@ El servidor no lee `.env` por sí mismo. Usa variables del entorno o administra 
 | `TIKTOK_OVERLAY_DATA_PATH` | Directorio `overlay` junto a `TIKTOK_CONFIG_PATH` | Documentos del overlay, textos del chat y eventos de usuario. |
 
 Monta almacenamiento persistente si necesitas conservar la configuración del backend entre reinicios. El directorio `data/` está excluido de Git.
+La configuración de WhatsApp se guarda en `whatsapp-notifications.json` junto a `TIKTOK_CONFIG_PATH`; incluye la API Key y debe conservarse en almacenamiento privado del servidor.
 
 ### EasyPanel
 
@@ -52,10 +53,15 @@ Selecciona el constructor **Dockerfile** para evitar la instalación de Nixpacks
 | `GET /api/config` | Usuario configurado. | `{ "username": "usuario" }` |
 | `PUT /api/config` | Guarda el usuario sin iniciar la conexión. | Envío: `{ "username": "@usuario" }`; respuesta: `{ "ok": true, "username": "usuario" }` |
 | `POST /api/reconnect` | Inicia o reinicia los reintentos; lo llama el navegador al cargar el overlay y su botón de estado. | JSON; `409` si falta cuenta o ya está conectado. |
-| `GET /api/game-tools` | Estado compartido del cronómetro y el contador persistente de regalos. | `{ "timerStartedAt": 0, "giftCount": 0 }` |
-| `GET /api/game-tools/events` | SSE para actualizar el estado y enviar comandos remotos al overlay. | Eventos `game-tools` y `game-command`. |
+| `GET /api/game-tools` | Estado compartido del cronómetro, regalos y multiplicador persistente de audiencia. | `{ "timerStartedAt": 0, "giftCount": 0, "audienceMultiplier": 10 }` |
+| `GET /api/game-tools/events` | SSE para actualizar estado, audiencia y comandos remotos del overlay. | Eventos `game-tools`, `game-settings`, `overlay-status`, `whatsapp-status` y `game-command`. |
+| `PUT /api/game-tools/settings` | Guarda el multiplicador de audiencia y los avances de los turbos. | Envío: `{ "audienceMultiplier": 10, "giftTurboProgress": 6, "tapTurboProgress": 3 }`; el multiplicador admite enteros de 1 a 1000 y los porcentajes de 0 a 100. |
 | `POST /api/game-tools/command` | Envía una herramienta del backend al overlay activo. | Envío: `{ "command": "sound-effects" }`; `400` si el comando no está permitido. |
 | `POST /api/game-tools/reset` | Reinicia manualmente el cronómetro y el contador compartido de regalos. | `{ "ok": true, "timerStartedAt": 0, "giftCount": 0 }` |
+| `POST /api/game-tools/overlay-heartbeat` | Recibe el estado visible del overlay; permite detectar si Android lo suspende o deja de reportar. | Envío: `{ "clientId": "android-overlay-01", "visible": true }` |
+| `GET /api/game-tools/overlay-status` | Estado y última señal del overlay. | `{ "online": true, "lastSeenAt": "..." }` |
+| `GET`, `PUT /api/whatsapp/config` | Lee/guarda URL base, instancia, número y API Key de Evolution API; la respuesta nunca incluye la API Key. | `PUT` recibe `{ "apiUrl": "https://...", "instance": "mi-instancia", "apiKey": "...", "phoneNumber": "595..." }` |
+| `POST /api/whatsapp/notifications` | Activa o desactiva los avisos de regalos y de overlay sin señal. | Envío: `{ "enabled": true }`; se requiere una configuración completa. |
 | `GET /api/comment-stats` | Conteo persistente de comentarios mencionando cada país y comentarios sin país. | JSON |
 | `GET /api/cup-stats` | Copas ganadas acumuladas por país. | JSON |
 | `POST /api/cup-stats` | Registra una copa al terminar una ronda. | Envío: `{ "code": "PY" }`; respuesta: estadísticas actualizadas. |
@@ -92,6 +98,8 @@ El overlay `v21.html` consume los eventos reales de `/api/events` y mantiene en 
 El servidor migra una sola vez los comentarios existentes de `data/tiktok/comments-archive.json` al nuevo flujo de textos. Los documentos del overlay se guardan en `data/tiktok/overlay/state/`. El directorio `data/` debe estar en almacenamiento persistente en producción; el backend no tiene autenticación, así que limita el acceso a la aplicación con una red privada, VPN o proxy autenticado.
 
 El navegador que carga el overlay inicia la conexión con reintentos cada 5 segundos durante un máximo de 5 minutos; si se agotan, el botón rojo permite reiniciarlos manualmente. El panel `/backend` también permite iniciar la conexión al guardar la cuenta; cargar el panel o arrancar el servidor no conecta TikTok.
+El overlay reporta su visibilidad al servidor cada 20 segundos y al apagarse la página; si el estado cambia de activo a inactivo, se envía un único aviso de WhatsApp cuando las alertas están habilitadas. La expiración por falta de señal es de 90 segundos.
+El límite de taps inicia en 10 por partida. Al completarlo, el próximo límite se calcula con el número actual de espectadores de `roomUser.totalUser` multiplicado por el ajuste guardado en el servidor (10 por defecto). Los avances totales de los turbos por regalo (6% por defecto durante 15 s) y por límite de taps (3% por defecto durante 7 s) también se configuran desde Herramientas en `/backend` y persisten entre reinicios.
 
 ## Estructura
 

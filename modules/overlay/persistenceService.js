@@ -63,6 +63,21 @@ function validateUserEvent(record) {
       || (record.type === 'gift' && typeof record.gift === 'string' && record.gift.length <= 80));
 }
 
+function stripNullBytes(content) {
+  return typeof content === 'string' ? content.replace(/\u0000/g, '') : content;
+}
+
+function safeReadJson(filePath, fallback) {
+  if (!fs.existsSync(filePath)) return fallback;
+  try {
+    const raw = stripNullBytes(fs.readFileSync(filePath, 'utf8'));
+    if (!raw.trim()) return fallback;
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
 function createOverlayPersistenceService({ directoryPath, legacyChatArchivePath } = {}) {
   if (typeof directoryPath !== 'string' || !directoryPath) {
     throw new Error('La ruta de persistencia del overlay es obligatoria.');
@@ -84,14 +99,22 @@ function createOverlayPersistenceService({ directoryPath, legacyChatArchivePath 
   }
 
   function readChatRecords() {
-    const raw = fs.readFileSync(chatLogPath, 'utf8');
-    return raw.split(/\r?\n/).filter(Boolean).map((line) => {
-      const record = JSON.parse(line);
-      if (!validateChatRecord(record)) {
-        throw new Error('El archivo de textos del chat contiene un registro no válido.');
-      }
-      return record;
-    });
+    if (!fs.existsSync(chatLogPath)) return [];
+    const raw = stripNullBytes(fs.readFileSync(chatLogPath, 'utf8'));
+    return raw.split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .flatMap((line) => {
+        try {
+          const record = JSON.parse(line);
+          if (!validateChatRecord(record)) {
+            return [];
+          }
+          return [record];
+        } catch {
+          return [];
+        }
+      });
   }
 
   function freshChatMeta(now = Date.now()) {
@@ -116,21 +139,21 @@ function createOverlayPersistenceService({ directoryPath, legacyChatArchivePath 
     if (fs.existsSync(chatLogPath) || fs.existsSync(chatMetaPath)
       || !legacyChatArchivePath || !fs.existsSync(legacyChatArchivePath)) return;
 
-    const saved = JSON.parse(fs.readFileSync(legacyChatArchivePath, 'utf8'));
+    const saved = safeReadJson(legacyChatArchivePath, null);
     if (!saved || typeof saved !== 'object' || Array.isArray(saved)
       || !Array.isArray(saved.comments)
       || saved.comments.some((comment) => !comment || typeof comment.text !== 'string'
         || typeof comment.time !== 'string')) {
-      throw new Error('El archivo anterior de comentarios no es válido y no se pudo migrar.');
+      return;
     }
 
     const records = saved.comments.map((comment) => {
       const timestamp = Date.parse(comment.time);
       if (!Number.isSafeInteger(timestamp)) {
-        throw new Error('El archivo anterior de comentarios tiene una fecha no válida.');
+        return null;
       }
       return [timestamp, comment.text];
-    });
+    }).filter(Boolean);
     const content = records.map((record) => JSON.stringify(record)).join('\n');
     fs.writeFileSync(chatLogPath, content ? `${content}\n` : '', { mode: 0o600 });
     const now = Date.now();
@@ -148,10 +171,7 @@ function createOverlayPersistenceService({ directoryPath, legacyChatArchivePath 
   migrateLegacyChatArchive();
   if (!fs.existsSync(chatLogPath)) fs.writeFileSync(chatLogPath, '', { mode: 0o600 });
 
-  let chatMeta;
-  if (fs.existsSync(chatMetaPath)) {
-    chatMeta = JSON.parse(fs.readFileSync(chatMetaPath, 'utf8'));
-  }
+  let chatMeta = safeReadJson(chatMetaPath, null);
   const actualSize = fs.statSync(chatLogPath).size;
   if (!chatMeta || chatMeta.v !== 1 || chatMeta.size !== actualSize
     || !Number.isSafeInteger(chatMeta.count) || chatMeta.count < 0) {
@@ -175,7 +195,14 @@ function createOverlayPersistenceService({ directoryPath, legacyChatArchivePath 
     }
     const filePath = path.join(stateDirectory, stateFileName(key));
     if (!fs.existsSync(filePath)) return { found: false };
-    return { found: true, value: JSON.parse(fs.readFileSync(filePath, 'utf8')) };
+    const value = safeReadJson(filePath, null);
+    if (value === null) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch {}
+      return { found: false };
+    }
+    return { found: true, value };
   }
 
   function writeState(key, value) {

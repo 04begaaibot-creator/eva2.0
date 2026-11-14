@@ -97,6 +97,31 @@ test('persists overlay state and bootstraps only small documents', async (t) => 
   }
 });
 
+test('recovers when persisted overlay files contain null bytes or invalid JSON', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tortu-corrupt-state-test-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const overlayDirectory = path.join(directory, 'overlay');
+  fs.mkdirSync(path.join(overlayDirectory, 'logs'), { recursive: true });
+  fs.writeFileSync(path.join(overlayDirectory, 'chat-archive-meta.json'), Buffer.alloc(256, 0));
+  fs.writeFileSync(path.join(overlayDirectory, 'logs', 'chat-texts.jsonl'), Buffer.from('[1712345678901,"Hola"]\n\u0000[1712345678902,"Mundo"]\n'));
+  fs.writeFileSync(path.join(directory, 'comments-archive.json'), Buffer.alloc(512, 0));
+
+  const server = makeServer(directory);
+  const baseUrl = await listen(server);
+
+  try {
+    const records = await fetch(`${baseUrl}/api/log/chat-texts.json`).then((response) => response.json());
+    assert.deepEqual(records, [[1712345678901, 'Hola'], [1712345678902, 'Mundo']]);
+
+    const bootstrap = await fetch(`${baseUrl}/api/state.js`).then((response) => response.text());
+    const context = { window: {} };
+    vm.runInNewContext(bootstrap, context);
+    assert.equal(context.window.CLUSS_STATE['cluss.chatArchive'].count, 2);
+  } finally {
+    await close(server);
+  }
+});
+
 test('appends, downloads, and clears anonymous chat-text records', async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tortu-chat-log-test-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
