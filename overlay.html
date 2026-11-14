@@ -967,7 +967,7 @@ const RACE_SECONDS=1800*PISTA;  /* segundos que tardaria una tortuga en llegar S
 const PASSIVE_CAP=100;    /* el avance pasivo se detiene en este % de pista: el resto exige interaccion */
 const HARD=0.5;          /* multiplicador de puntos de cada evento (1 = facil, menor = mas dificil) */
 const TURBO_PPS=4,TURBO_PROLONGED_MS=10000,GIFT_TURBO_MS=15000,HEART_TURBO_MS=7000;
-let GIFT_TURBO_PROGRESS=6,HEART_TURBO_PROGRESS=3;
+let GIFT_TURBO_PROGRESS=6,HEART_TURBO_PROGRESS=20;
 let GIFT_TURBO_PPS=GIFT_TURBO_PROGRESS/(GIFT_TURBO_MS/1000),HEART_TURBO_PPS=HEART_TURBO_PROGRESS/(HEART_TURBO_MS/1000);
 function turboGain(rate,ms,handicap){return rate*ms/1000*handicap}
 const GIFT_PROGRESS=10,GIFT_TEAM_WINDOW_MS=60000; /* avance directo de cada regalo; el equipo se resuelve por chat reciente */
@@ -4116,74 +4116,69 @@ poll();setInterval(poll,500);paint();
 #copas .rw:before{min-width:12px!important;height:12px!important;font-size:8px!important;left:-3px!important;top:-4px!important}
 /* pista: cede su alto al cuadro de usuarios */
 .sv>svg{height:calc(496px + var(--ex) - var(--pnl,0px))!important}
-/* cuadro de hinchas: DOS cuadros (uno por equipo), 12 hinchas cada uno, avatares grandes. El borde lleva el color del equipo */
+/* Ticker automatico: lista los usuarios reales de cada equipo y recorre la lista completa. */
 #rank{order:-2;flex:none;display:grid;grid-template-columns:1fr 1fr;gap:4px}
-#rank .rk{display:grid;grid-template-columns:repeat(var(--rc,4),minmax(0,1fr));gap:5px 3px;justify-items:center;align-content:start;padding:5px 4px 5px;background:linear-gradient(#7a4e2a,#5a3a1e);border:2px solid var(--tc,#3f2713);border-radius:10px;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
-#rank .u{position:relative;width:min(100%,33px);min-width:0}
-#rank .av{width:100%;aspect-ratio:1/1;border-radius:50%;border:2px solid var(--c,#c9ccd1);background:#3f2713;display:flex;align-items:center;justify-content:center;overflow:hidden;font:800 14px Inter,sans-serif;color:#fff}
-#rank .av img{width:100%;height:100%;object-fit:cover;display:block}
-#rank .n{position:absolute;left:-3px;top:-4px;min-width:13px;height:13px;padding:0 2px;border-radius:7px;background:#3f2713;border:1px solid #ffe14d;color:#ffe14d;font:900 8px/11px Inter,sans-serif;text-align:center;z-index:2}
-#rank .u.f1 .av{border-color:#ffe14d;box-shadow:0 0 6px 1px rgba(255,225,77,.7)}
-#rank .u.f1:after{content:"👑";position:absolute;right:-4px;top:-9px;font-size:12px;transform:rotate(18deg);z-index:2}
-#rank .s{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);min-width:70%;padding:0 3px;border-radius:7px;background:rgba(27,18,10,.95);border:1px solid #ffe14d;font:900 11px/14px Inter,sans-serif;text-align:center;color:#ffe14d;white-space:nowrap;z-index:3}
-#rank .rk{padding-bottom:11px}
-#rank .u.e{opacity:.3}#rank .u.e .s{display:none}
+#rank .rk{min-width:0;height:48px;display:flex;flex-direction:column;gap:2px;padding:3px 4px;background:linear-gradient(#7a4e2a,#5a3a1e);border:2px solid var(--tc,#3f2713);border-radius:10px;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
+#rank .rk-head{display:flex;justify-content:space-between;gap:4px;overflow:hidden;color:#fff;font:800 8px/1.1 Inter,sans-serif;text-shadow:0 1px 2px #000;white-space:nowrap}
+#rank .rk-count{flex:none;color:#ffe14d}
+#rank .roster-window{min-width:0;flex:1;overflow:hidden}
+#rank .roster-track{display:flex;width:max-content;height:100%}
+#rank .roster-track.scrolling{animation:rankTicker var(--ticker-duration,18s) linear infinite}
+#rank .roster-group{display:flex;align-items:center;gap:8px;width:max-content;padding-right:8px;white-space:nowrap}
+#rank .roster-user{display:inline-flex;align-items:center;gap:3px;color:#fff;font:700 8px/1 Inter,sans-serif}
+#rank .roster-avatar{position:relative;flex:none;width:18px;height:18px;border:1px solid var(--tc,#ffe14d);border-radius:50%;background:#3f2713;display:flex;align-items:center;justify-content:center;overflow:hidden;font:800 9px Inter,sans-serif}
+#rank .roster-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#rank .roster-name{max-width:74px;overflow:hidden;text-overflow:ellipsis}
+@keyframes rankTicker{to{transform:translateX(-50%)}}
 /* cuenta regresiva */
 #evs .st[data-k="idle"].low span{color:#ff6b6b;animation:v11p .5s ease-in-out infinite alternate}
 @keyframes v11p{to{transform:scale(1.25)}}
 </style>
 <script>
 (function(){
-/* ---------- 2) CUADRO DE USUARIOS: top 10 con su puntaje (1.2K, 3.4M) ---------- */
-const PER_TEAM=16,COLS=4; /* 12 hinchas por equipo; COLS=4 -> 3 filas de avatares grandes (6 -> 2 filas mas bajas y avatares mas chicos) */
-const fmt=n=>{n=Math.floor(n||0);if(n<1000)return String(n); /* 999 -> 1k -> 12k -> 1.2m */
- const f=v=>v<10?v.toFixed(1).replace(/\.0$/,''):String(Math.round(v));
- return n>=999500?f(n/1e6)+'m':f(n/1e3)+'k'};
-const info=new Map(); /* foto y nombre del ultimo evento real de cada usuario */
-const _h=handleLiveEntry;
-handleLiveEntry=function(e){
- try{if(e&&!e.bot&&e.username){const k=String(e.username).trim().toLowerCase();
-  const url=String(e.profilePictureUrl||e.profilePicture||e.avatarUrl||e.avatar||e.userImage||e.imageUrl||'');
-  const o=info.get(k)||{name:String(e.username).trim(),url:''};if(url)o.url=url;info.set(k,o)}}catch(x){}
- return _h.apply(this,arguments);
-};
+/* ---------- 2) TICKER DE USUARIOS REALES: miembros y participantes asignados por su comentario ---------- */
 const box=document.createElement('div');box.id='rank';box.setAttribute('aria-label','Hinchas de cada equipo');
-box.style.setProperty('--rc',COLS);
 const bar=document.getElementById('topbar'),app=document.getElementById('app');
 (bar||app).prepend(box);
-let last=null; /* null: dibuja los 12 huecos de cada equipo aunque aun no haya usuarios */
-const teamOfUser=(k,known)=>{const kn=known&&known.get(k);if(kn&&kn.t>=0)return kn.t;try{if(picks.has(k))return picks.get(k)}catch(e){}return -1};
+let last=null;
+function makeRosterGroup(users,t){
+ const group=document.createElement('div');group.className='roster-group';
+ for(const user of users){
+  const item=document.createElement('span');item.className='roster-user';item.title='@'+user.name;
+  const avatar=document.createElement('span');avatar.className='roster-avatar';avatar.textContent=String(user.name||user.key).replace(/^@/,'').charAt(0).toUpperCase();avatar.style.setProperty('--tc',T[t].c==='#f1f1f1'?'#e5e5e5':T[t].c);
+  if(/^https:\/\//i.test(user.url||'')){const image=new Image();image.referrerPolicy='no-referrer';image.alt='';image.onerror=()=>image.remove();image.src=user.url;avatar.append(image)}
+  const name=document.createElement('span');name.className='roster-name';name.textContent='@'+String(user.name||user.key).replace(/^@/,'');
+  item.append(avatar,name);group.append(item);
+ }
+ if(!users.length)group.textContent='Sin usuarios conectados';
+ return group;
+}
 function paint(){try{
- const userScore=window.__userScore,known=window.__known;if(!userScore)return;
- const all=[...userScore.entries()].filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
- const per=[0,1].map(t=>all.filter(x=>teamOfUser(x[0],known)===t).slice(0,PER_TEAM));
- const key=per.map((arr,t)=>(T[t]?T[t].id+T[t].c:'')+'>'+arr.map(x=>x.join(':')+':'+((info.get(x[0])||{}).url||'')).join('|')).join('||');
+ const known=window.__known;if(!known)return;
+ const per=[0,1].map(t=>[...known.values()].filter(user=>user.t===t).sort((a,b)=>a.name.localeCompare(b.name)));
+ const key=per.map((users,t)=>(T[t]?T[t].id+T[t].c:'')+'>'+users.map(user=>[user.key,user.name,user.url||''].join(':')).join('|')).join('||');
  if(key===last)return;last=key;
  box.textContent='';
- per.forEach((arr,t)=>{
+ per.forEach((users,t)=>{
   const rk=document.createElement('div');rk.className='rk';rk.dataset.t=t;
   const tc=T[t]&&T[t].c;rk.style.setProperty('--tc',tc==='#f1f1f1'?'#e5e5e5':(tc||'#3f2713'));
-  if(T[t])rk.setAttribute('aria-label','Hinchas de '+T[t].n);
-  for(let i=0;i<PER_TEAM;i++){
-   const d=document.createElement('div'),x=arr[i];d.className='u'+(i?'':' f1')+(x?'':' e');
-   const av=document.createElement('div');av.className='av';
-   const n=document.createElement('span');n.className='n';n.textContent=i+1;
-   const s=document.createElement('span');s.className='s';
-   if(x){
-    const k=x[0],o=info.get(k)||(known&&known.get(k)?{name:known.get(k).name,url:known.get(k).url}:{name:k,url:''});
-    const kn=known&&known.get(k);if(T[t])av.style.setProperty('--c',T[t].c==='#f1f1f1'?'#e5e5e5':T[t].c);
-    const ini=()=>{av.textContent=(o.name||k).replace(/^@/,'').charAt(0).toUpperCase()};
-    const url=o.url||(kn&&kn.url)||'';
-    if(/^https:/.test(url)){const im=new Image();im.referrerPolicy='no-referrer';im.alt='';im.onerror=()=>{im.remove();ini()};im.src=url;av.append(im)}else ini();
-    d.title='@'+(o.name||k)+' · '+x[1]+' pts';s.textContent=fmt(x[1]);
-   }
-   d.append(n,av,s);rk.append(d);
-  }
+  const heading=document.createElement('div');heading.className='rk-head';
+  const teamName=document.createElement('span');teamName.textContent=T[t].n;
+  const count=document.createElement('span');count.className='rk-count';count.textContent=users.length+' usuarios';
+  heading.append(teamName,count);
+  const viewport=document.createElement('div');viewport.className='roster-window';
+  const track=document.createElement('div');track.className='roster-track';
+  const group=makeRosterGroup(users,t);track.append(group);
+  if(users.length)track.append(group.cloneNode(true));
+  viewport.append(track);rk.append(heading,viewport);
   box.append(rk);
+  if(users.length&&group.scrollWidth>viewport.clientWidth){
+   track.classList.add('scrolling');track.style.setProperty('--ticker-duration',Math.max(12,users.length*1.6)+'s');
+  }else if(users.length>0&&track.children.length>1)track.lastElementChild.remove();
  });
  sizeUp();
 }catch(e){}}
-registerRoundCleanup(()=>{info.clear();last=null});
+registerRoundCleanup(()=>{last=null});
 let lastH=0;
 function sizeUp(){const h=box.offsetHeight;if(!h||h===lastH)return;lastH=h;
  document.documentElement.style.setProperty('--pnl',(h+4)+'px');dispatchEvent(new Event('resize'))}

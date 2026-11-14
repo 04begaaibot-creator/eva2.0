@@ -19,7 +19,8 @@ const GAME_COMMANDS = new Set([
 const OVERLAY_OFFLINE_AFTER_MS = 90_000;
 const HEARTBEAT_CHECK_INTERVAL_MS = 15_000;
 const DEFAULT_GIFT_TURBO_PROGRESS = 6;
-const DEFAULT_TAP_TURBO_PROGRESS = 3;
+const DEFAULT_TAP_TURBO_PROGRESS = 20;
+const PREVIOUS_DEFAULT_TAP_TURBO_PROGRESS = 3;
 const MAX_TURBO_PROGRESS = 100;
 
 function createGameToolsService({
@@ -57,11 +58,13 @@ function createGameToolsService({
         && saved.value.giftTurboProgress <= MAX_TURBO_PROGRESS
         ? saved.value.giftTurboProgress
         : DEFAULT_GIFT_TURBO_PROGRESS,
-      tapTurboProgress: Number.isFinite(saved.value.tapTurboProgress)
-        && saved.value.tapTurboProgress >= 0
-        && saved.value.tapTurboProgress <= MAX_TURBO_PROGRESS
-        ? saved.value.tapTurboProgress
-        : DEFAULT_TAP_TURBO_PROGRESS,
+      tapTurboProgress: saved.value.tapTurboProgress === PREVIOUS_DEFAULT_TAP_TURBO_PROGRESS
+        ? DEFAULT_TAP_TURBO_PROGRESS
+        : Number.isFinite(saved.value.tapTurboProgress)
+          && saved.value.tapTurboProgress >= 0
+          && saved.value.tapTurboProgress <= MAX_TURBO_PROGRESS
+          ? saved.value.tapTurboProgress
+          : DEFAULT_TAP_TURBO_PROGRESS,
     }
     : {
       timerStartedAt: now(),

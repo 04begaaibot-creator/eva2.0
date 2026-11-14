@@ -229,7 +229,7 @@ test('shares server game tools and gift counts across clients until manually res
     assert.ok(Number.isSafeInteger(initial.timerStartedAt));
     assert.equal(Object.hasOwn(initial, 'audienceMultiplier'), false);
     assert.equal(initial.giftTurboProgress, 6);
-    assert.equal(initial.tapTurboProgress, 3);
+    assert.equal(initial.tapTurboProgress, 20);
 
     const settingsResponse = await fetch(`${baseUrl}/api/game-tools/settings`, {
       method: 'PUT',
@@ -302,6 +302,37 @@ test('shares server game tools and gift counts across clients until manually res
     );
   } finally {
     if (reader) await reader.cancel();
+    await close(server);
+  }
+});
+
+test('migrates the former default tap turbo progress to 20 percent', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tortu-tap-progress-migration-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const statePath = path.join(directory, 'overlay', 'state', 'Y2x1c3MuZ2FtZVRvb2xz.json');
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, JSON.stringify({
+    timerStartedAt: 1,
+    giftCount: 0,
+    giftTurboProgress: 6,
+    tapTurboProgress: 3,
+  }));
+  const { server } = createWebserver({
+    configurationPath: path.join(directory, 'config.json'),
+    overlayDataPath: path.join(directory, 'overlay'),
+    monitorService: createMonitorService(),
+  });
+  const baseUrl = await listen(server);
+
+  try {
+    const settings = await fetch(`${baseUrl}/api/game-tools`).then((response) => response.json());
+    assert.equal(settings.tapTurboProgress, 20);
+    assert.equal(
+      JSON.parse(fs.readFileSync(statePath, 'utf8')).tapTurboProgress,
+      20,
+      'the migrated setting should be persisted for subsequent restarts',
+    );
+  } finally {
     await close(server);
   }
 });

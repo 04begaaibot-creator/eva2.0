@@ -148,6 +148,20 @@ test('turbo tap limit starts at 50 and rises with race progress, not audience', 
   assert.doesNotMatch(html, /audienceMultiplier|nextAudienceTapLimit|LEVEL_PROGRESS_START|LEVEL_MAX_TAPS/);
 });
 
+test('each completed tap limit advances 20 percent through turbo', () => {
+  assert.match(html, /let GIFT_TURBO_PROGRESS=6,HEART_TURBO_PROGRESS=20/);
+  assert.match(html, /turboOn\(t,HEART_TURBO_MS\*full,HEART_TURBO_PPS\)/);
+  assert.match(html, /HEART_TURBO_PROGRESS\*full/);
+});
+
+test('team tickers include every known user and scroll overflowing rosters', () => {
+  const ticker = html.slice(html.indexOf('/* ---------- 2) TICKER DE USUARIOS REALES'), html.indexOf('</script>', html.indexOf('/* ---------- 2) TICKER DE USUARIOS REALES')));
+  assert.match(ticker, /\[\.\.\.known\.values\(\)\]\.filter\(user=>user\.t===t\)/);
+  assert.match(ticker, /track\.classList\.add\('scrolling'\)/);
+  assert.match(html, /@keyframes rankTicker\{to\{transform:translateX\(-50%\)\}\}/);
+  assert.doesNotMatch(ticker, /PER_TEAM|slice\(0,/);
+});
+
 test('each team shows its live-wide event total in compact K and M notation', () => {
   assert.match(html, /class="team-total" id="teamTotal\$\{i\}"/);
   assert.match(html, /const teamEventTotals=new Map\(\)/);
@@ -256,7 +270,8 @@ test('race reset releases round-only caches and voice queues', () => {
   assert.match(html, /picks\.clear\(\);lastChat\.clear\(\);recentChatPicks\.clear\(\);clearRoundCaches\(\)/);
   assert.match(html, /function voReset\(\)\{[^}]*chatReadAt\.clear\(\);giftQueue\.length=0;voiceQueue\.length=0;activeVoiceRequest=null;giftSpeaking=false;giftSpeechGeneration\+\+/);
   assert.match(html, /registerRoundCleanup\(\(\)=>\{visto\.clear\(\);pts\.clear\(\);box\.replaceChildren\(\)\}\)/);
-  assert.match(html, /registerRoundCleanup\(\(\)=>\{info\.clear\(\);last=null\}\)/);
+  assert.match(html, /registerRoundCleanup\(\(\)=>\{last=null\}\)/);
+  assert.match(html, /seen\.clear\(\);known\.clear\(\);userScore\.clear\(\)/);
   assert.match(html, /reset=function\(\)\{ultimo\.clear\(\);return _reset\.apply\(this,arguments\)\}/);
 });
 
