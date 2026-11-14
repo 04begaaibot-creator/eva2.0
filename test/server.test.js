@@ -171,7 +171,7 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.equal((await fetch(`${baseUrl}/v45.html`)).status, 404);
     const serviceWorker = await fetch(`${baseUrl}/sw.js`);
     assert.equal(serviceWorker.status, 200);
-    assert.match(await serviceWorker.text(), /tortu-shell-v15/);
+    assert.match(await serviceWorker.text(), /tortu-shell-v16/);
     assert.equal((await fetch(`${baseUrl}/activity-policy.js`)).status, 200);
     assert.equal((await fetch(`${baseUrl}/api/activity-policy.js`)).status, 200);
     const manifest = await fetch(`${baseUrl}/manifest.webmanifest`);
