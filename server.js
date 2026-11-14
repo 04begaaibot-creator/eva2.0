@@ -6,6 +6,9 @@ const { createTikTokModule, createTikTokMonitorService } = require('./modules/ti
 const { registerOverlayRoutes } = require('./modules/overlay');
 const { createOverlayPersistenceService } = require('./modules/overlay/persistenceService');
 const { createGameToolsService } = require('./modules/overlay/gameToolsService');
+const { createDeploymentSignature } = require('./modules/deploymentSignature');
+
+const deploymentSignature = createDeploymentSignature();
 
 function createWebserver({
   configurationPath = process.env.TIKTOK_CONFIG_PATH
@@ -56,6 +59,10 @@ function createWebserver({
 
   app.get('/health', (request, response) => {
     response.json({ ok: true });
+  });
+  app.get('/api/deployment-signature', (request, response) => {
+    response.setHeader('Cache-Control', 'no-store, max-age=0');
+    response.json({ signature: deploymentSignature });
   });
   app.use('/api', (request, response) => {
     response.status(404).json({ ok: false, message: 'Ruta API no encontrada.' });

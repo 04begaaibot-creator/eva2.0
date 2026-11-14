@@ -125,6 +125,8 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.match(servedHtml, /new EventSource\('\/api\/events'\)/);
     assert.match(servedHtml, /source\.addEventListener\('status'/);
     assert.match(servedHtml, /source\.addEventListener\('update'/);
+    assert.match(servedHtml, /id="deploySignature"/);
+    assert.match(servedHtml, /fetch\('\/api\/deployment-signature',\{cache:'no-store'\}\)/);
     assert.match(servedHtml, /toolsSource\.addEventListener\('game-command'/);
     assert.match(servedHtml, /if\(command==='refresh'\)\{location\.reload\(\);return\}/);
     assert.match(servedHtml, /\/api\/game-tools\/overlay-heartbeat/);
@@ -143,6 +145,11 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.match(servedHtml, /id="toggleLiveLog"/);
     assert.match(servedHtml, /id="copyLiveLog"/);
     assert.match(servedHtml, /navigator\.clipboard\.writeText/);
+
+    const deploymentResponse = await fetch(`${baseUrl}/api/deployment-signature`);
+    assert.equal(deploymentResponse.status, 200);
+    assert.match(deploymentResponse.headers.get('cache-control'), /no-store/);
+    assert.match((await deploymentResponse.json()).signature, /^sha256-[a-f0-9]{16}$/);
     assert.match(servedHtml, /if\(!isLiveDiagnosticActive\(\)\)return/);
     assert.match(servedHtml, /window\.liveEventMonitor\.completeRound\(T\[i\]\.id\)/);
     assert.match(servedHtml, /pendingChatRecords\.push/);

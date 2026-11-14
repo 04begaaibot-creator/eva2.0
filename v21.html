@@ -658,7 +658,7 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
 <div class="win" id="win" role="alertdialog" aria-label="Ganador"></div>
 </section>
 <!-- Herramientas visibles: estado de conexión, ajuste del límite de taps y recarga. -->
-<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">cluss</span><button class="sm" id="bTurboDn" type="button" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" type="button" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" type="button" aria-label="Refrescar página" title="Refrescar página">🔄</button><span class="version" aria-label="Límite de taps del turbo y versión 1.2.2"><span id="turboLim">⚡ Límite 100 taps</span> · v1.2.2</span></div>
+<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">cluss</span><button class="sm" id="bTurboDn" type="button" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" type="button" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" type="button" aria-label="Refrescar página" title="Refrescar página">🔄</button><span class="version" aria-label="Límite de taps del turbo, versión y firma del backend"><span id="turboLim">⚡ Límite 100 taps</span> · v1.2.2 · <span id="deploySignature" aria-label="Firma del backend">srv:…</span></span></div>
 <!-- FRANJA DE ESTADISTICAS del live: solo eventos REALES (los bots y los toques manuales no cuentan). El contador de regalos es solo informativo -->
 <div class="evs" id="evs" role="status" aria-label="Estadisticas del live"><div class="st" data-k="member" title="Unidos"><b>👥</b><span>0</span></div><div class="st" data-k="chat" title="Comentarios"><b>💬</b><span>0</span></div><div class="st" data-k="like" title="Me gusta"><b>❤️</b><span>0</span></div><div class="st" data-k="follow" title="Seguidores nuevos"><b>➕</b><span>0</span></div><div class="st" data-k="share" title="Compartidos"><b>↗️</b><span>0</span></div></div>
 <div id="giftTotal" role="status" aria-label="Regalos recibidos: 0">0</div>
@@ -1441,6 +1441,21 @@ const source=new EventSource('/api/events');
 source.addEventListener('status',event=>{const payload=JSON.parse(event.data);setConnection(payload);recordReceivedEvent('status',payload)});
 source.addEventListener('update',event=>window.liveEventMonitor.receive(JSON.parse(event.data)));
 source.onerror=()=>{const status={connected:false,status:'reconnecting'};setConnection(status);recordReceivedEvent('connection',status)};
+const deploySignatureElement=document.getElementById('deploySignature');
+fetch('/api/deployment-signature',{cache:'no-store'}).then(response=>{
+ if(!response.ok)throw new Error('El backend respondió '+response.status+'.');
+ return response.json();
+}).then(payload=>{
+ if(!payload||typeof payload.signature!=='string'||!/^sha256-[a-f0-9]{16}$/.test(payload.signature)){
+  throw new Error('La firma recibida del backend no es válida.');
+ }
+ deploySignatureElement.textContent='srv:'+payload.signature.slice(-8);
+ deploySignatureElement.title='Firma del backend: '+payload.signature;
+}).catch(error=>{
+ deploySignatureElement.textContent='srv:error';
+ deploySignatureElement.title='No se pudo consultar la firma del backend.';
+ console.error('No se pudo cargar la firma del backend.',error);
+});
 fetch('/api/reconnect',{method:'POST'}).then(async response=>{
  if(!response.ok&&response.status!==409){
   const result=await response.json();
