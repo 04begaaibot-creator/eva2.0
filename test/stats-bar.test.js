@@ -7,19 +7,22 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'v21.html'), 'utf8');
 
-test('free tournament is the default locked mode and can be manually unlocked', () => {
-  assert.match(html, /let tournamentMode='libre'/);
-  assert.match(html, /let lock='libre'/);
-  assert.match(html, /v==='auto'\)lock=null/);
+test('classic tournament starts locked in Spanish and can be manually unlocked', () => {
+  assert.match(html, /let tournamentMode='clasico'/);
+  assert.match(html, /let lock='clasico'/);
+  assert.match(html, /pref\.clasico='es'/);
   assert.match(html, /SRV\.set\('cluss\.torneoLock',lock\|\|'auto'\)/);
+  assert.match(html, /const seq=\[\.\.\.M,null\];lock=seq\[\(seq\.indexOf\(lock\)\+1\)%seq\.length\]/);
 });
 
-test('classic mode creates a fixed Olimpia versus Cerro tournament with their shirt-color flags', () => {
+test('classic mode alternates the Olimpia-Cerro and Barcelona-Real Madrid fixtures', () => {
   assert.match(html, /TOURNAMENT_OPTIONS=TOURNAMENT_MODES\.slice\(\)/);
   assert.match(html, /TOURNAMENT_MODES=\['libre','clasico'/);
-  assert.match(html, /clasico:'CLÁSICO OLIMPIA VS CERRO'/);
-  assert.match(html, /if\(mode==='clasico'\)return\['ol','cp'\]/);
+  assert.match(html, /clasico:'CLÁSICO OLIMPIA VS CERRO \/ BARCELONA VS REAL MADRID'/);
+  assert.match(html, /CLASSIC_FIXTURES=\[\['ol','cp'\],\['ucl-bc','ucl-rm'\]\]/);
+  assert.match(html, /if\(mode==='clasico'\)return CLASSIC_FIXTURES\[classicFixtureIndex\]\.slice\(\)/);
   assert.match(html, /bracketFrom\(mode==='clasico'\?ids:ids\.slice\(\)\.sort/);
+  assert.match(html, /if\(tournamentMode==='clasico'\)classicFixtureIndex=\(classicFixtureIndex\+1\)%CLASSIC_FIXTURES\.length/);
   assert.match(html, /FINAL CLÁSICA/);
   assert.match(html, /SHORT=\{libre:'LIBRE',clasico:'CLÁSICO'/);
   assert.match(html, /if\(k==='ol'\)return `<rect[^`]+fill="#fff"[^`]+fill="#111"/);
@@ -69,11 +72,11 @@ test('team tap counters omit the turbo badge and use the freed width for the cou
   assert.match(html, /\.hb em\{justify-content:flex-start;left:20px;right:2px/);
 });
 
-test('turbo tap limit starts at 10 and uses audience and the server multiplier for the next limit', () => {
-  assert.match(html, /let HEART_N=10,heartLimitOffset=0,liveAudienceCount=null,audienceMultiplier=10/);
-  assert.match(html, /function nextAudienceTapLimit\(\)/);
+test('turbo tap limit starts at 100 and increases by 10 independently of audience', () => {
+  assert.match(html, /let HEART_N=100,heartLimitOffset=0/);
+  assert.match(html, /P\.nextTapLimit=P\.nextTapLimit\|\|function\(current\)/);
   assert.match(html, /TAP_POLICY\.consumeTapCountWithNextLimit/);
-  assert.match(html, /game-settings/);
+  assert.doesNotMatch(html, /audienceMultiplier|nextAudienceTapLimit/);
   assert.doesNotMatch(html, /LEVEL_PROGRESS_START|LEVEL_MAX_TAPS/);
 });
 
@@ -119,18 +122,28 @@ test('activity policy fallback repairs a cached frozen policy missing team assig
   vm.runInNewContext(fallback, { window });
   assert.equal(window.TORTUWORLD_ACTIVITY_POLICY.resolveSupportSide('a', 2), 1);
   assert.equal(window.TORTUWORLD_ACTIVITY_POLICY.statEventDelta('chat'), 1);
-  assert.equal(window.TORTUWORLD_ACTIVITY_POLICY.audienceTapLimit(12, 10), 120);
+  assert.equal(window.TORTUWORLD_ACTIVITY_POLICY.nextTapLimit(100), 110);
+  const consumed = window.TORTUWORLD_ACTIVITY_POLICY.consumeTapCountWithNextLimit(0, 330, 100);
+  assert.equal(consumed.remaining, 0);
+  assert.equal(consumed.activations, 3);
+  assert.equal(consumed.nextLimit, 130);
 });
 
-test('voiceover announces only the rose turbo prompt at each race start', () => {
-  assert.match(html, /VL=\[\s*\{id:'intro',at:2,s:'Rositas activan el turbo',v:\[\(\)=>'Si envían rositas, se activa el turbo para que tu equipo llegue más rápido\.'\]\},\s*\]/);
+test('voiceover announces progress without asking for gifts or interactions', () => {
+  const start = html.indexOf('/* ===== VOZ EN OFF:');
+  const end = html.indexOf('/* ALIENTO:', start);
+  const voiceover = start < 0 || end < 0 ? '' : html.slice(start, end);
+  assert.ok(voiceover, 'voiceover block should exist');
+  assert.match(voiceover, /El equipo '\+name\+' llegó al '\+percent\+'% de avance\./);
+  assert.doesNotMatch(voiceover, /env[ií]a(?:n)? rositas|env[ií]a(?:n)? regalos|comenta en el chat|deja un like/);
   assert.doesNotMatch(html, /GIFT_TURBO_REMINDER_MS|giftTurboReminderAt/);
 });
 
-test('voice prompts the supported team in chat at each 15% race milestone', () => {
+test('voice announces each team at 15% race milestones without prompting chat', () => {
   assert.match(html, /PROGRESS_MILESTONES=\[15,30,45,60,75,90\]/);
   assert.match(html, /const key='progress-'\+team\+'-'\+percent/);
-  assert.match(html, /Comenta en el chat el club que apoyas para ayudarle a avanzar/);
+  assert.match(html, /El equipo '\+name\+' llegó al '\+percent\+'% de avance\./);
+  assert.doesNotMatch(html, /Comenta en el chat el club que apoyas/);
 });
 
 test('team changes are announced before chat and per-round announcement state is cleared', () => {
@@ -140,11 +153,9 @@ test('team changes are announced before chat and per-round announcement state is
   assert.match(html, /function voReset\(\)\{chatSide\.clear\(\);teamAnnounceAt\.clear\(\)/);
 });
 
-test('rose toggle uses server persistence and controls rose prompts', () => {
+test('rose setting remains persisted without controlling voice prompts', () => {
   assert.match(html, /SRV\.get\('cluss\.askRose','1'\)/);
   assert.match(html, /SRV\.set\('cluss\.askRose',roseOn\?'1':'0'\)/);
-  assert.match(html, /call\.percent===50&&\(vSess\.has\('turbo-rose'\)\|\|\(window\.askRoseOn&&!window\.askRoseOn\(\)\)\)/);
-  assert.match(html, /window\.askRoseOn&&\!window\.askRoseOn\(\)&&roseRaceN%2===0/);
   assert.match(html, /w\.append\(rb,c,g\)/);
 });
 

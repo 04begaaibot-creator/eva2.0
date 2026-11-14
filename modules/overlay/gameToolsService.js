@@ -18,8 +18,6 @@ const GAME_COMMANDS = new Set([
 ]);
 const OVERLAY_OFFLINE_AFTER_MS = 90_000;
 const HEARTBEAT_CHECK_INTERVAL_MS = 15_000;
-const DEFAULT_AUDIENCE_MULTIPLIER = 10;
-const MAX_AUDIENCE_MULTIPLIER = 1000;
 const DEFAULT_GIFT_TURBO_PROGRESS = 6;
 const DEFAULT_TAP_TURBO_PROGRESS = 3;
 const MAX_TURBO_PROGRESS = 100;
@@ -54,11 +52,6 @@ function createGameToolsService({
     ? {
       timerStartedAt: saved.value.timerStartedAt,
       giftCount: saved.value.giftCount,
-      audienceMultiplier: Number.isSafeInteger(saved.value.audienceMultiplier)
-        && saved.value.audienceMultiplier >= 1
-        && saved.value.audienceMultiplier <= MAX_AUDIENCE_MULTIPLIER
-        ? saved.value.audienceMultiplier
-        : DEFAULT_AUDIENCE_MULTIPLIER,
       giftTurboProgress: Number.isFinite(saved.value.giftTurboProgress)
         && saved.value.giftTurboProgress >= 0
         && saved.value.giftTurboProgress <= MAX_TURBO_PROGRESS
@@ -73,7 +66,6 @@ function createGameToolsService({
     : {
       timerStartedAt: now(),
       giftCount: 0,
-      audienceMultiplier: DEFAULT_AUDIENCE_MULTIPLIER,
       giftTurboProgress: DEFAULT_GIFT_TURBO_PROGRESS,
       tapTurboProgress: DEFAULT_TAP_TURBO_PROGRESS,
     };
@@ -111,7 +103,7 @@ function createGameToolsService({
 
   if (!savedState || state.timerStartedAt !== savedState.timerStartedAt
     || state.giftCount !== savedState.giftCount
-    || state.audienceMultiplier !== savedState.audienceMultiplier
+    || Object.prototype.hasOwnProperty.call(savedState, 'audienceMultiplier')
     || state.giftTurboProgress !== savedState.giftTurboProgress
     || state.tapTurboProgress !== savedState.tapTurboProgress) persist();
 
@@ -126,7 +118,6 @@ function createGameToolsService({
   function getGameSettings() {
     return {
       count: audienceCount,
-      audienceMultiplier: state.audienceMultiplier,
       giftTurboProgress: state.giftTurboProgress,
       tapTurboProgress: state.tapTurboProgress,
     };
@@ -147,17 +138,8 @@ function createGameToolsService({
   }
 
   function setGameSettings(body) {
-    const multiplier = body?.audienceMultiplier;
     const giftTurboProgress = Number(body?.giftTurboProgress);
     const tapTurboProgress = Number(body?.tapTurboProgress);
-    if (!Number.isSafeInteger(multiplier) || multiplier < 1
-      || multiplier > MAX_AUDIENCE_MULTIPLIER) {
-      return {
-        ok: false,
-        status: 400,
-        message: `El multiplicador debe ser un número entero entre 1 y ${MAX_AUDIENCE_MULTIPLIER}.`,
-      };
-    }
     if (!Number.isFinite(giftTurboProgress) || giftTurboProgress < 0
       || giftTurboProgress > MAX_TURBO_PROGRESS
       || !Number.isFinite(tapTurboProgress) || tapTurboProgress < 0
@@ -170,7 +152,6 @@ function createGameToolsService({
     }
     state = {
       ...state,
-      audienceMultiplier: multiplier,
       giftTurboProgress: Math.round(giftTurboProgress * 10) / 10,
       tapTurboProgress: Math.round(tapTurboProgress * 10) / 10,
     };

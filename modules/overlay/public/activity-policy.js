@@ -32,33 +32,43 @@
         + Math.max(0, Math.floor(Number(added) || 0));
       return { remaining: total % threshold, activations: Math.floor(total / threshold) };
     },
-    consumeTapCountWithNextLimit(current, added, limit, nextLimit) {
+    consumeTapCountWithNextLimit(current, added, limit) {
       const threshold = Math.floor(Number(limit));
-      const followingThreshold = Math.floor(Number(nextLimit));
-      if (!Number.isFinite(threshold) || threshold < 1
-        || !Number.isFinite(followingThreshold) || followingThreshold < 1) {
+      if (!Number.isSafeInteger(threshold) || threshold < 1) {
         return { remaining: 0, activations: 0, nextLimit: threshold };
       }
-      const total = Math.max(0, Math.floor(Number(current) || 0))
-        + Math.max(0, Math.floor(Number(added) || 0));
+      const total = Math.min(Number.MAX_SAFE_INTEGER,
+        Math.max(0, Math.floor(Number(current) || 0))
+          + Math.max(0, Math.floor(Number(added) || 0)));
       if (total < threshold) return { remaining: total, activations: 0, nextLimit: threshold };
       const afterFirst = total - threshold;
+      const followingThreshold = Math.min(Number.MAX_SAFE_INTEGER, threshold + 10);
+      if (followingThreshold === threshold) {
+        return {
+          remaining: afterFirst % threshold,
+          activations: 1 + Math.floor(afterFirst / threshold),
+          nextLimit: threshold,
+        };
+      }
+      let low = 0;
+      let high = Math.ceil(Math.sqrt(afterFirst / 5)) + 1;
+      while (low < high) {
+        const middle = Math.ceil((low + high) / 2);
+        const cost = middle * (followingThreshold + (middle - 1) * 5);
+        if (cost <= afterFirst) low = middle;
+        else high = middle - 1;
+      }
+      const consumedAfterFirst = low * (followingThreshold + (low - 1) * 5);
       return {
-        remaining: afterFirst % followingThreshold,
-        activations: 1 + Math.floor(afterFirst / followingThreshold),
-        nextLimit: followingThreshold,
+        remaining: afterFirst - consumedAfterFirst,
+        activations: 1 + low,
+        nextLimit: Math.min(Number.MAX_SAFE_INTEGER, followingThreshold + low * 10),
       };
     },
-    audienceTapLimit(audienceCount, multiplier, offset = 0) {
-      const count = audienceCount === null ? null : Number(audienceCount);
-      const factor = Number(multiplier);
-      const adjustment = Number(offset);
-      const base = Number.isSafeInteger(count) && count >= 0
-        && Number.isSafeInteger(factor) && factor >= 1 && factor <= 1000
-        ? count * factor
-        : 10;
-      const total = base + (Number.isFinite(adjustment) ? Math.floor(adjustment) : 0);
-      return Math.max(10, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(total)));
+    nextTapLimit(current) {
+      const limit = Math.floor(Number(current));
+      if (!Number.isSafeInteger(limit) || limit < 1) return 100;
+      return Math.min(Number.MAX_SAFE_INTEGER, limit + 10);
     },
     giftProgress(activityCount, progressPerGift) {
       return statEventDelta('gift', activityCount) * progressPerGift;

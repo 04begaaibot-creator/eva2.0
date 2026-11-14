@@ -231,12 +231,8 @@
             <div class="tools-metric"><span>Cronómetro del servidor</span><strong id="server-timer">00:00:00</strong></div>
             <div class="tools-metric"><span>Regalos recibidos</span><strong id="server-gifts">0</strong></div>
             <div class="tools-metric"><span>Audiencia actual</span><strong id="server-audience">—</strong></div>
-            <div class="tools-metric"><span>Multiplicador guardado</span><strong id="server-audience-multiplier">10×</strong></div>
           </div>
           <form id="game-settings-form" class="whatsapp-form">
-            <label for="audience-multiplier">Multiplicador de audiencia
-              <input id="audience-multiplier" name="audienceMultiplier" type="number" min="1" max="1000" step="1" value="10" required>
-            </label>
             <label for="gift-turbo-progress">Avance total del turbo por regalo (%)
               <input id="gift-turbo-progress" name="giftTurboProgress" type="number" min="0" max="100" step="0.1" value="6" required>
             </label>
@@ -245,7 +241,7 @@
             </label>
             <button class="button" type="submit">Guardar ajustes</button>
           </form>
-          <p id="game-settings-message" role="status" class="tool-note">El primer límite de cada partida es 10 taps; después, el servidor calcula audiencia × multiplicador. También controla el avance de los turbos por regalo y por límite.</p>
+          <p id="game-settings-message" role="status" class="tool-note">Cada partida inicia en 100 taps; cada activación aumenta el siguiente límite en 10. La audiencia es solo informativa. También puedes ajustar el avance de los turbos.</p>
           <div class="tool-actions">
             <button class="button secondary" type="button" data-command="language">🌐 Cambiar idioma</button>
             <button class="button secondary" type="button" data-command="narrator">🗣️ Narrador Don Tortu</button>
@@ -352,9 +348,7 @@
     const serverTimer = document.querySelector('#server-timer');
     const serverGifts = document.querySelector('#server-gifts');
     const serverAudience = document.querySelector('#server-audience');
-    const serverAudienceMultiplier = document.querySelector('#server-audience-multiplier');
     const gameSettingsForm = document.querySelector('#game-settings-form');
-    const audienceMultiplierInput = document.querySelector('#audience-multiplier');
     const giftTurboProgressInput = document.querySelector('#gift-turbo-progress');
     const tapTurboProgressInput = document.querySelector('#tap-turbo-progress');
     const gameSettingsMessage = document.querySelector('#game-settings-message');
@@ -385,7 +379,6 @@
       gameToolsState = state;
       serverGifts.textContent = state.giftCount.toLocaleString('es-PY');
       renderGameSettings({
-        audienceMultiplier: state.audienceMultiplier,
         giftTurboProgress: state.giftTurboProgress,
         tapTurboProgress: state.tapTurboProgress,
       }, forceSettings);
@@ -399,10 +392,6 @@
           : '—';
       }
       if (forceSettings || !gameSettingsForm.contains(document.activeElement)) {
-        if (Number.isSafeInteger(state?.audienceMultiplier)) {
-          audienceMultiplierInput.value = String(state.audienceMultiplier);
-          serverAudienceMultiplier.textContent = `${state.audienceMultiplier}×`;
-        }
         if (Number.isFinite(state?.giftTurboProgress)) {
           giftTurboProgressInput.value = String(state.giftTurboProgress);
         }
@@ -520,7 +509,6 @@
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          audienceMultiplier: Number(audienceMultiplierInput.value),
           giftTurboProgress: Number(giftTurboProgressInput.value),
           tapTurboProgress: Number(tapTurboProgressInput.value),
         }),

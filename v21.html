@@ -40,7 +40,7 @@ Las reglas marcadas (propuesto) aun no estan confirmadas por el autor.
  - Eventos reales ponderados en el contador: miembro 1, comentario 10, like 1 por me gusta, seguir 3 y compartir 5. Los regalos son independientes del contador.
  - Al completar el limite dinamico se activa el turbo durante 10 s. Los eventos reales no avanzan la pista ni activan el turbo directamente.
  - Cada regalo real avanza 10% inmediatamente y activa además un turbo de 15 s cuyo avance total se configura en el servidor (6% por defecto).
- - El primer limite de taps de cada partida es 10; luego el servidor calcula audiencia x multiplicador. El turbo del limite dura 7 s y su avance total tambien se configura en el servidor (3% por defecto).
+ - El limite de taps inicia en 100 y sube 10 taps tras cada activacion. La audiencia es informativa y no afecta el limite.
 
 7. DIFICULTAD (v12)
  - Ganar cuesta: cada evento vale HARD (0.5) de lo que valia, y el avance pasivo se detiene en PASSIVE_CAP (%). El resto de la pista solo se recorre con interaccion.
@@ -66,7 +66,7 @@ Las reglas marcadas (propuesto) aun no estan confirmadas por el autor.
  - Sin gente real, los huevos son avatares de BOT (🤖 tortubot_N, claramente bots) y el frente sale del JSON de hinchas (HINCHAS_JSON editable + /api/recent-users); sin JSON, la bandera.
  - Los eventos del bot nunca entran al nido ni se hacen pasar por personas. Al empezar cada ronda el nido vuelve a bots.
 14. TORNEO LIBRE (v12)
- - Modo 'libre': arranca ACTIVO y BLOQUEADO por defecto (cluss.torneoLock ausente = libre). Solo se sale con el boton 🔒 de la barra (ciclo: Libre > torneos fijos > AUTO > Libre).
+ - Arranque fijo: clásico OLIMPIA vs CERRO, idioma español; después alterna con BARCELONA vs REAL MADRID.
  - Duelo suelto de 2 carriles. El chat REAL propone equipos (de cualquier torneo): cada comentario que nombra uno le suma 1 voto (libreVotes, se guarda en el servidor: clave cluss.v1). Los 2 mas votados juegan la siguiente carrera.
  - Todo evento real que no es regalo (comentario, like, seguir, compartir) va SOLO al contador de taps; solo los regalos mueven la pista directo. Un comentario con un equipo que no corre ademas le suma 1 voto.
  - INACTIVIDAD: se mide desde la ultima interaccion REAL (chat, like, regalo, seguir, compartir; los 'member' no reinician el reloj). Plazo 60 s; con mas de 1000 interacciones en el partido, 120 s. Se muestra regresivo en segundos (#idleCountdown). Al vencer, gana el que va primero y avanza, pero NO suma copa.
@@ -610,8 +610,8 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
  P.tapEventDelta=P.tapEventDelta||function(t,n){var w={member:1,chat:10,like:1,follow:3,share:5}[t]||0,c=+n;return w?w*(isFinite(c)&&c>0?Math.max(1,Math.floor(c)):1):0};
  P.statEventDelta=P.statEventDelta||function(t,n){if(['member','chat','gift','like','follow','share'].indexOf(t)<0)return 0;var c=+n;return t==='gift'||t==='like'?(isFinite(c)&&c>0?Math.max(1,Math.floor(c)):1):1};
  P.consumeTapCount=P.consumeTapCount||function(c,a,l){l=Math.floor(+l);if(!isFinite(l)||l<1)return{remaining:0,activations:0};var total=Math.max(0,Math.floor(+c||0))+Math.max(0,Math.floor(+a||0));return{remaining:total%l,activations:Math.floor(total/l)}};
- P.consumeTapCountWithNextLimit=P.consumeTapCountWithNextLimit||function(c,a,l,n){l=Math.floor(+l);n=Math.floor(+n);if(!isFinite(l)||l<1||!isFinite(n)||n<1)return{remaining:0,activations:0,nextLimit:l};var total=Math.max(0,Math.floor(+c||0))+Math.max(0,Math.floor(+a||0));if(total<l)return{remaining:total,activations:0,nextLimit:l};var r=total-l;return{remaining:r%n,activations:1+Math.floor(r/n),nextLimit:n}};
- P.audienceTapLimit=P.audienceTapLimit||function(count,multiplier,offset){var c=count===null?null:Number(count),m=Number(multiplier),o=Number(offset),base=Number.isSafeInteger(c)&&c>=0&&Number.isSafeInteger(m)&&m>=1&&m<=1000?c*m:10,total=base+(isFinite(o)?Math.floor(o):0);return Math.max(10,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(total)))};
+ P.consumeTapCountWithNextLimit=P.consumeTapCountWithNextLimit||function(c,a,l){l=Math.floor(+l);if(!Number.isSafeInteger(l)||l<1)return{remaining:0,activations:0,nextLimit:l};var total=Math.min(Number.MAX_SAFE_INTEGER,Math.max(0,Math.floor(+c||0))+Math.max(0,Math.floor(+a||0)));if(total<l)return{remaining:total,activations:0,nextLimit:l};var r=total-l,n=Math.min(Number.MAX_SAFE_INTEGER,l+10);if(n===l)return{remaining:r%l,activations:1+Math.floor(r/l),nextLimit:l};var lo=0,hi=Math.ceil(Math.sqrt(r/5))+1;while(lo<hi){var mid=Math.ceil((lo+hi)/2),cost=mid*(n+(mid-1)*5);if(cost<=r)lo=mid;else hi=mid-1}var used=lo*(n+(lo-1)*5);return{remaining:r-used,activations:1+lo,nextLimit:Math.min(Number.MAX_SAFE_INTEGER,n+lo*10)}};
+ P.nextTapLimit=P.nextTapLimit||function(current){var limit=Math.floor(Number(current));if(!Number.isSafeInteger(limit)||limit<1)return 100;return Math.min(Number.MAX_SAFE_INTEGER,limit+10)};
  P.giftProgress=P.giftProgress||function(n,p){return P.statEventDelta('gift',n)*p};
  P.giftTurboDuration=P.giftTurboDuration||function(n,d){return P.statEventDelta('gift',n)*d};
  P.tapLimitStep=P.tapLimitStep||function(){return 0};
@@ -658,7 +658,7 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
 <div class="win" id="win" role="alertdialog" aria-label="Ganador"></div>
 </section>
 <!-- BARRA DE HERRAMIENTAS siempre visible: idioma, narradores, efectos, estadisticas, reinicio, turbo, refrescar, CTA y torneo -->
-<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">cluss</span><button class="sm" id="bLang" type="button" aria-label="Idioma / Language" title="Idioma / Language">EN</button><button class="sm on" id="bVoz" aria-pressed="true" aria-label="Narrador Don Tortu (V)" title="Narrador Don Tortu (V)">🗣️</button><button class="sm on" id="bVozB" aria-pressed="true" aria-label="Narrador B: lee comentarios del chat" title="Narrador B: lee comentarios del chat">🎙️B</button><button class="sm on" id="bSfx" aria-pressed="true" aria-label="Efectos de sonido (S)">🔊</button><button class="sm" id="bStat" aria-label="Estadísticas de torneos" title="Estadísticas de torneos">📊</button><button class="sm" id="bReset" aria-label="Reiniciar copas (tocar dos veces)" title="Reiniciar copas (tocar dos veces)">↺</button><button class="sm" id="bTurboDn" aria-label="Bajar el límite de taps del turbo en 100" title="Turbo: 100 taps menos">➖</button><button class="sm" id="bTurboUp" aria-label="Subir el límite de taps del turbo en 100" title="Turbo: 100 taps más">➕</button><button class="sm" id="bRefresh" aria-label="Refrescar página" title="Refrescar página">🔄</button><span class="version" aria-label="Límite de taps del turbo y versión 1.2.2"><span id="turboLim">⚡ Límite 10 taps</span> · v1.2.2</span></div>
+<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">cluss</span><button class="sm" id="bLang" type="button" aria-label="Idioma / Language" title="Idioma / Language">EN</button><button class="sm on" id="bVoz" aria-pressed="true" aria-label="Narrador Don Tortu (V)" title="Narrador Don Tortu (V)">🗣️</button><button class="sm on" id="bVozB" aria-pressed="true" aria-label="Narrador B: lee comentarios del chat" title="Narrador B: lee comentarios del chat">🎙️B</button><button class="sm on" id="bSfx" aria-pressed="true" aria-label="Efectos de sonido (S)">🔊</button><button class="sm" id="bStat" aria-label="Estadísticas de torneos" title="Estadísticas de torneos">📊</button><button class="sm" id="bReset" aria-label="Reiniciar copas (tocar dos veces)" title="Reiniciar copas (tocar dos veces)">↺</button><button class="sm" id="bTurboDn" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" aria-label="Refrescar página" title="Refrescar página">🔄</button><span class="version" aria-label="Límite de taps del turbo y versión 1.2.2"><span id="turboLim">⚡ Límite 100 taps</span> · v1.2.2</span></div>
 <!-- FRANJA DE ESTADISTICAS del live: solo eventos REALES (los bots y los toques manuales no cuentan). El contador de regalos es solo informativo -->
 <div class="evs" id="evs" role="status" aria-label="Estadisticas del live"><div class="st" data-k="member" title="Unidos"><b>👥</b><span>0</span></div><div class="st" data-k="chat" title="Comentarios"><b>💬</b><span>0</span></div><div class="st" data-k="like" title="Me gusta"><b>❤️</b><span>0</span></div><div class="st" data-k="follow" title="Seguidores nuevos"><b>➕</b><span>0</span></div><div class="st" data-k="share" title="Compartidos"><b>↗️</b><span>0</span></div></div>
 <div id="giftTotal" role="status" aria-label="Regalos recibidos: 0">0</div>
@@ -755,24 +755,22 @@ const ELITE_POOL={ /* ELITE NATIONS CUP: 8 paises */
  'el-gb':{id:'el-gb',n:'REINO UNIDO',s:'GBR',emoji:'🇬🇧',aliases:['REINO UNIDO','UK','UNITED KINGDOM','GRAN BRETAÑA','GRAN BRETANA']},'el-de':{id:'el-de',n:'ALEMANIA',s:'GER',emoji:'🇩🇪',aliases:['ALEMANIA','GERMANY']},
  'el-au':{id:'el-au',n:'AUSTRALIA',s:'AUS',emoji:'🇦🇺',aliases:['AUSTRALIA']},'el-sg':{id:'el-sg',n:'SINGAPUR',s:'SGP',emoji:'🇸🇬',aliases:['SINGAPUR','SINGAPORE']}
 };
-const TOURNAMENT_MODES=['libre','clasico','libertadores','champions','countries','america','elite']; /* 'libre' = TORNEO LIBRE: arranca activo y bloqueado; solo se sale con el boton manual 🔒 */
+const TOURNAMENT_MODES=['libre','clasico','libertadores','champions','countries','america','elite'];
 const TOURNAMENT_OPTIONS=TOURNAMENT_MODES.slice();
-const TOURNAMENT_LABELS={libre:'TORNEO LIBRE',clasico:'CLÁSICO OLIMPIA VS CERRO',libertadores:'LIBERTADORES',champions:'CHAMPIONS',countries:'COPA DEL MUNDO',america:'COPA AMÉRICA',elite:'ELITE NATIONS CUP'};
+const TOURNAMENT_LABELS={libre:'TORNEO LIBRE',clasico:'CLÁSICO OLIMPIA VS CERRO / BARCELONA VS REAL MADRID',libertadores:'LIBERTADORES',champions:'CHAMPIONS',countries:'COPA DEL MUNDO',america:'COPA AMÉRICA',elite:'ELITE NATIONS CUP'};
+const CLASSIC_FIXTURES=[['ol','cp'],['ucl-bc','ucl-rm']];
+let classicFixtureIndex=0;
 const COUNTRY_CHAMPIONS=['ct-ar','ct-br','ct-de','ct-es','ct-fr','ct-it','ct-uy','ct-en'];
 const COUNTRY_POPULAR_FALLBACK=['ct-py','ct-co','ct-cl','ct-mx','ct-us','ct-pt','ct-nl','ct-jp']; /* entran al Mundial si el chat aun no voto */
-let tournamentMode='libre',countryPopularity={},countryEntrants=[],tournamentInteractions={},libreVotes={},libreLast=[];
+let tournamentMode='clasico',countryPopularity={},countryEntrants=[],tournamentInteractions={},libreVotes={},libreLast=[];
 try{
  const saved=SRV.get('cluss.v1',{}); /* BACKEND: estado inicial viene de /api/state.js (clave cluss.v1) */
- /* Sin eleccion manual guardada = TORNEO LIBRE bloqueado. 'auto' = rotacion automatica; otro valor = torneo fijo elegido a mano (boton 🔒). */
- const lockPref=SRV.get('cluss.torneoLock',null); /* BACKEND: clave cluss.torneoLock */
- if(lockPref==='auto'){if(TOURNAMENT_MODES.includes(saved.tournamentMode))tournamentMode=saved.tournamentMode}
- else if(TOURNAMENT_MODES.includes(lockPref))tournamentMode=lockPref;
  if(saved.libreVotes&&typeof saved.libreVotes==='object'&&!Array.isArray(saved.libreVotes))for(const k in saved.libreVotes){const v=+saved.libreVotes[k];if(v>0)libreVotes[k]=v}
  if(saved.countryPopularity&&typeof saved.countryPopularity==='object')countryPopularity=saved.countryPopularity;
  if(Array.isArray(saved.countryEntrants))countryEntrants=saved.countryEntrants;
  if(saved.tournamentInteractions&&typeof saved.tournamentInteractions==='object')tournamentInteractions=saved.tournamentInteractions;
 }catch(e){}
-function poolForMode(mode=tournamentMode){return mode==='libre'?librePool():mode==='countries'?COUNTRY_POOL:mode==='champions'?CHAMPIONS_POOL:mode==='libertadores'?LIBERTADORES_POOL:mode==='america'?AMERICA_POOL:mode==='elite'?ELITE_POOL:POOL}
+function poolForMode(mode=tournamentMode){return mode==='libre'?librePool():mode==='clasico'?Object.assign({},POOL,CHAMPIONS_POOL):mode==='countries'?COUNTRY_POOL:mode==='champions'?CHAMPIONS_POOL:mode==='libertadores'?LIBERTADORES_POOL:mode==='america'?AMERICA_POOL:mode==='elite'?ELITE_POOL:POOL}
 function countryTournamentIds(){
  const nonWinners=Object.keys(COUNTRY_POOL).filter(id=>!COUNTRY_CHAMPIONS.includes(id));
  const fallbackRank=new Map(COUNTRY_POPULAR_FALLBACK.map((id,i)=>[id,i]));
@@ -782,7 +780,7 @@ function countryTournamentIds(){
 }
 function tournamentIds(mode=tournamentMode){
  if(mode==='libre')return['libre-a','libre-b']; /* el Torneo Libre es un duelo suelto: solo importa que sean 2 puestos */
- if(mode==='clasico')return['ol','cp'];
+ if(mode==='clasico')return CLASSIC_FIXTURES[classicFixtureIndex].slice();
  if(mode==='countries'&&countryEntrants.length===16&&countryEntrants.every(id=>COUNTRY_POOL[id]))return countryEntrants;
  return Object.keys(poolForMode(mode));
 }
@@ -866,7 +864,7 @@ try{
  const ids=tournamentIds();
  if(saved.br&&Array.isArray(saved.br.r)&&saved.br.r.length>=2&&saved.br.r[0].length===ids.length
   &&saved.br.r[0].every(k=>activePool[k])
-  &&(tournamentMode!=='clasico'||saved.br.r[0][0]==='ol'&&saved.br.r[0][1]==='cp')
+  &&(tournamentMode!=='clasico'||ids.every((id,index)=>saved.br.r[0][index]===id))
   &&saved.br.r.every((r,i)=>Array.isArray(r)&&r.length===Math.max(1,ids.length/Math.pow(2,i))))BR=saved.br;
 }catch(e){}
 if(!BR||!brCur())BR=brNew(); /* sin cuadro guardado o ya terminado: sorteo nuevo */
@@ -1497,7 +1495,7 @@ document.querySelector('.version').lastChild.textContent=' · v1.2.2';
 function refreshTournamentButton(){tournamentButton.textContent='🏆';tournamentButton.title='Torneo actual: '+TOURNAMENT_LABELS[tournamentMode]+' · cambiar';tournamentButton.setAttribute('aria-label','Cambiar torneo; actual: '+TOURNAMENT_LABELS[tournamentMode])}
 function startTournament(mode){
  if(!TOURNAMENT_OPTIONS.includes(mode))throw new Error('Tipo de torneo desconocido: '+mode);
- tournamentMode=mode;if(mode==='countries')countryEntrants=[];
+ tournamentMode=mode;if(mode==='clasico')classicFixtureIndex=0;if(mode==='countries')countryEntrants=[];
  BR=brNew(mode);const c=brCur();
  P.tournamentMode=mode;P.countryEntrants=countryEntrants;P.countryPopularity=countryPopularity;
  P.tournamentInteractions=tournamentInteractions;P.br=BR;P.duel=c.duel.slice();P.wins=[0,0];save();
@@ -1658,15 +1656,10 @@ T.forEach((t,i)=>$('#sv'+i).insertAdjacentHTML('beforeend','<div class="nest" id
  Los huevos sin usuario real se rellenan con avatares de BOT (🤖, claramente bots). Al empezar cada ronda el nido vuelve a ser de bots.
  fanPool    = usuarios del JSON (HINCHAS_JSON + /api/recent-users): se muestran al frente SOLO mientras el equipo no tenga eventos reales. */
 const HINCHAS_JSON=[ /* editar aqui. Formato: {username:'maria_ol', avatar:'https://...jpg', team:'ol'}  (team opcional: 'ol' o 'cp'; avatar debe ser https) */ ];
-/* ===== CONTADOR TAP TAP: inicia en 10; luego el limite y avances de turbo los configura el servidor ===== */
-let HEART_N=10,heartLimitOffset=0,liveAudienceCount=null,audienceMultiplier=10;
+/* ===== CONTADOR TAP TAP: inicia en 100 y sube 10 taps tras cada activacion ===== */
+let HEART_N=100,heartLimitOffset=0;
 const heart=T.map(()=>0);
-function nextAudienceTapLimit(){
- return TAP_POLICY.audienceTapLimit(liveAudienceCount,audienceMultiplier,heartLimitOffset);
-}
-function setLiveAudienceSettings(count,multiplier,giftProgress,tapProgress){
- if(count===null||(Number.isSafeInteger(count)&&count>=0))liveAudienceCount=count;
- if(Number.isSafeInteger(multiplier)&&multiplier>=1&&multiplier<=1000)audienceMultiplier=multiplier;
+function setLiveTurboSettings(giftProgress,tapProgress){
  if(Number.isFinite(giftProgress)&&giftProgress>=0&&giftProgress<=100){
   GIFT_TURBO_PROGRESS=giftProgress;GIFT_TURBO_PPS=giftProgress/(GIFT_TURBO_MS/1000);
  }
@@ -1674,9 +1667,9 @@ function setLiveAudienceSettings(count,multiplier,giftProgress,tapProgress){
   HEART_TURBO_PROGRESS=tapProgress;HEART_TURBO_PPS=tapProgress/(HEART_TURBO_MS/1000);
  }
 }
-window.setLiveAudienceSettings=setLiveAudienceSettings;
+window.setLiveTurboSettings=setLiveTurboSettings;
 function syncHeartLimit(){
- const n=nextAudienceTapLimit();
+ const n=Math.max(10,Math.min(Number.MAX_SAFE_INTEGER,100+heartLimitOffset));
  if(n===HEART_N)return;
  const prevN=HEART_N;HEART_N=n;
  T.forEach((_,i)=>renderHeart(i));
@@ -1699,7 +1692,7 @@ function heartAdd(t,n){
  if(over||!T[t])return;
  const previousLimit=HEART_N;
  const {remaining,activations:full,nextLimit}=TAP_POLICY.consumeTapCountWithNextLimit(
-  heart[t],n,HEART_N,nextAudienceTapLimit(),
+  heart[t],n,HEART_N,
  );
  heart[t]=remaining;
  if(full)HEART_N=nextLimit;
@@ -1728,8 +1721,8 @@ function setTurboLimit(d){
  T.forEach((_,i)=>{if(heart[i]>=HEART_N&&!over){heart[i]=HEART_N-1;heartAdd(i,1)}else renderHeart(i)});
  toast('Turbo cada '+HEART_N+' taps','⚡');
 }
-$('#bTurboUp').onclick=()=>setTurboLimit(100);
-$('#bTurboDn').onclick=()=>setTurboLimit(-100);
+$('#bTurboUp').onclick=()=>setTurboLimit(10);
+$('#bTurboDn').onclick=()=>setTurboLimit(-10);
 const NEST_EGGS=12,FRONT_EGGS=0,/* 0 = sin huevos grandes (quitados) */recent=T.map(()=>[]),fanPool=[],fanSides=new Map();let fanTurn=0;
 const teamOf=k=>TAP_POLICY.resolveSupportSide(k,T.length);
 function addFan(f){ /* agrega un usuario del JSON al pool y devuelve su equipo */
@@ -1911,8 +1904,12 @@ function champion(i){
 function nextMatch(){
  clearTimeout(rs);
  if(!brCur()){
-  tournamentMode=TOURNAMENT_MODES[(TOURNAMENT_MODES.indexOf(tournamentMode)+1)%TOURNAMENT_MODES.length];
-  if(tournamentMode==='countries')countryEntrants=[];
+  if(tournamentMode==='clasico')classicFixtureIndex=(classicFixtureIndex+1)%CLASSIC_FIXTURES.length;
+  else{
+   tournamentMode=TOURNAMENT_MODES[(TOURNAMENT_MODES.indexOf(tournamentMode)+1)%TOURNAMENT_MODES.length];
+   if(tournamentMode==='clasico')classicFixtureIndex=0;
+   if(tournamentMode==='countries')countryEntrants=[];
+  }
   BR=brNew(tournamentMode);P.tournamentMode=tournamentMode;
  }
  const c=brCur(),duel=c.duel;
@@ -1925,7 +1922,7 @@ function nextMatch(){
 /* ===== RESET DE COPAS (boton "Reiniciar copas" del panel de estadisticas): top 3, copas y torneo vuelven a cero, y arranca una carrera nueva.
  NO borra el historial guardado en las estadisticas; solo cierra el torneo en curso sin campeon. ===== */
 function resetCopas(){
- P.wins=[0,0];Object.keys(Object.assign({},POOL,COUNTRY_POOL,CHAMPIONS_POOL,LIBERTADORES_POOL,AMERICA_POOL,ELITE_POOL)).forEach(k=>P.cp[k]=0);P.races=0;P.best=0;FX=0;P.fx=0;BR=brNew();P.br=BR;P.tournamentMode=tournamentMode;P.countryEntrants=countryEntrants;P.countryPopularity=countryPopularity;P.tournamentInteractions=tournamentInteractions;{const d=brCur().duel;P.duel=d.slice();save();aplicarDuelo(d)}
+ P.wins=[0,0];Object.keys(Object.assign({},POOL,COUNTRY_POOL,CHAMPIONS_POOL,LIBERTADORES_POOL,AMERICA_POOL,ELITE_POOL)).forEach(k=>P.cp[k]=0);P.races=0;P.best=0;FX=0;P.fx=0;classicFixtureIndex=0;BR=brNew();P.br=BR;P.tournamentMode=tournamentMode;P.countryEntrants=countryEntrants;P.countryPopularity=countryPopularity;P.tournamentInteractions=tournamentInteractions;{const d=brCur().duel;P.duel=d.slice();save();aplicarDuelo(d)}
  clearTimeout(rs);reset();renderTop3();stCloseTour();
  toast('Copas reiniciadas: todo empieza de cero','🔄');
 }
@@ -1933,7 +1930,7 @@ const _reset=reset;
 reset=function(){ajustesDePartida();seen.clear();known.clear();userScore.clear();recent.forEach(l=>l.length=0);fanTurn++;gs.fill(2);T.forEach((_,i)=>{$('#ev'+i).hidden=true;heart[i]=0;renderHeart(i);$('#in'+i).style.setProperty('--s',2);renderNest(i);renderPod(i)});evT.forEach(clearTimeout);evL.forEach(clearTimeout);voReset();contrib.clear();us.clear();joined.clear();turbo.fill(0);turboPower.fill(0);giftTurboUntil.fill(0);lastMvp=null;hy.hidden=true;T.forEach((_,i)=>$('#ln'+i).classList.remove('turbo'));leads=0;sprint=false;pm=1;lastStreak=0;tk=0;$('#app').classList.remove('sprint');_reset();A.sfx('start');hud();logStat({type:'round-start',duel:DUELO});toast(T[0].n+'  ·  '+T[1].n,'💬')}; /* ronda nueva en las estadisticas */
 window.tortugas.reset=reset;window.tortugas.resetCopas=resetCopas;
 const _resetTurboLimit=reset;
-reset=function(){heartLimitOffset=0;HEART_N=10;matchInteractionCount=0;lastInteractionAt=Date.now();lowActivityFinished=false;_resetTurboLimit()};
+reset=function(){heartLimitOffset=0;HEART_N=100;matchInteractionCount=0;lastInteractionAt=Date.now();lowActivityFinished=false;_resetTurboLimit()};
 window.tortugas.reset=reset;
 /* Boton ↺ de la barra de herramientas: doble toque (el primero lo arma y brilla 4 s, el segundo reinicia las copas) */
 let rsArm=0;
@@ -2024,7 +2021,7 @@ document.getElementById('evs').appendChild(idleStat);
 /* v11: limite de taps actual (HEART_N): al llenarlo se activa el turbo */
 const limStat=document.createElement('div');
 limStat.className='st';limStat.dataset.k='lim';limStat.title='Límite de taps actual (al completarlo se activa el turbo)';
-limStat.innerHTML='<b>🎯</b><span id="tapLimit">50</span>';
+limStat.innerHTML='<b>🎯</b><span id="tapLimit">100</span>';
 document.getElementById('evs').insertBefore(limStat,idleStat);
 /* Formato compacto de numeros (1.2K) */
 const stFmt=n=>n<1000?String(n):n<999500?(n<10000?(n/1000).toFixed(1).replace(/\.0$/,''):String(Math.round(n/1000)))+'K':(n<1e7?(n/1e6).toFixed(1).replace(/\.0$/,''):String(Math.round(n/1e6)))+'M';
@@ -2193,7 +2190,7 @@ function perks(e){
 const SS=window.speechSynthesis;
 if(P.vo===undefined)P.vo=1;
 if(P.vb===undefined)P.vb=1; /* narrador B (lector de chat): su propio boton; no se fuerza por ronda */
-let voices=[],vT0=performance.now(),vLast=-1e9,vRound=0;const vDone=new Set(),vSess=new Set(); /* vDone: por ronda · vSess: por sesion (pedidos de interaccion, una sola vez) */
+let voices=[],vT0=performance.now(),vLast=-1e9,vRound=0;const vDone=new Set();
 const loadV=()=>{try{voices=SS.getVoices()||[]}catch(e){}};
 if(SS){loadV();SS.onvoiceschanged=loadV}
 const FEMALE_VOICE=/female|woman|femin|mujer|helena|hilda|laura|luc[ií]a|m[oó]nica|paulina|sabina|isabela|ximena|sof[ií]a|elena|carmen|dalia|elvira|salom[eé]|paloma|camila|catalina|lorena|marina/i;
@@ -2232,7 +2229,7 @@ function enqueueTeamMove(display,team,prev){
  chatQueue.splice(at,0,item);
  while(chatQueue.length>CHAT_Q_MAX+3){const di=chatQueue.findIndex(x=>!x.priority);chatQueue.splice(di>=0?di:0,1)}
 }
-/* Voz del relator (speechSynthesis). Los pedidos se limitan a los hitos escalonados; no promete resultados. */
+/* Voz del relator: narra la carrera sin pedir regalos ni interacciones. */
 function speak(text,sub,force,team,onDone){
  if(!SS||(team==='chat'?!P.vb:!P.vo))return false;
  try{
@@ -2254,12 +2251,7 @@ const narratorQueue=[],narratorTimers=T.map(()=>0),narratorTalkTimers=T.map(()=>
 let narratorLastSpoken=-1e9;
 function showNarrator(team){} /* narradores por equipo eliminados */
 function queueNarratorIntroductions(){
- return; /* narradores por equipo eliminados: sin presentaciones */
- const scripts=[
-  'Soy la narradora de '+T[0].n+'. Hinchas, escriban '+T[0].n+' en el chat para jugar; si escriben '+T[1].n+', cambian de equipo. Apoyen con el corazón, compartiendo o activando ROSITA.',
-  'Soy el narrador de '+T[1].n+'. Hinchas, escriban '+T[1].n+' en el chat para jugar; si escriben '+T[0].n+', cambian de equipo. Apoyen con el corazón, compartiendo o activando ROSITA.'
- ];
- scripts.forEach((text,team)=>narratorQueue.push({team,text,intro:true}));
+ return;
 }
 const _narratorLiveEntry=handleLiveEntry;
 handleLiveEntry=function(entry){
@@ -2311,69 +2303,17 @@ say=function(t){
  if(!over&&P.vo&&/toma la delantera/.test(t)&&performance.now()-vLast>8000)
   speak(t.replace(/\s*\+\d+/,'').replace(/[A-ZÁÉÍÓÚÑ]{3,}/g,w=>w[0]+w.slice(1).toLowerCase()),null,false);
 };
-/* Aviso de voz al iniciar cada carrera. */
-const VL=[
- {id:'intro',at:2,s:'Rositas activan el turbo',v:[()=>'Si envían rositas, se activa el turbo para que tu equipo llegue más rápido.']},
-];
 const VF=['¡Recta final! Todo se decide ahora. ¡Vamos, tortugas!','¡Llegando a la meta! ¡Qué emoción, esto está parejísimo!'];
 const VW=['¡Ganó {n}! Gracias por jugar y alentar. En unos segundos arranca otra ronda, ¡te esperamos!','¡Tenemos campeón: {n}! Gracias por estar. Ya viene una nueva carrera.'];
-const ENGAGEMENT_AT=[]; /* CTAs eliminados: sin pedidos de rosita/pistola */
-const ENGAGEMENT_CALLS={
- 50:'Para activar el modo turbo, envía una rosita real. Los regalos reales también avanzan la pista.',
- 75:'Para ganar este partido, envía una Pistola de dinero a tu equipo.',
-};
-/* Entrega un pedido a la vez, en orden, aunque el avance salte varios hitos. */
-function nextEngagementCall(progress,done){
- const percent=ENGAGEMENT_AT.find(value=>Math.max(...progress)>=value&&!done.has('engagement'+value));
- return percent===undefined?null:{percent,text:ENGAGEMENT_CALLS[percent]};
-}
 /* Voz: reinicia los temporizadores y colas del relator al empezar la ronda. */
 function voReset(){chatSide.clear();teamAnnounceAt.clear();chatQueue.length=0;chatReadAt.clear();giftQueue.length=0;giftSpeaking=false;giftSpeechGeneration++;chatReadyAt=0;vT0=performance.now();vDone.clear();vRound++;vLast=-1e9;narratorLastSpoken=-1e9;narratorQueue.length=0;try{SS&&SS.cancel();A.duck(0)}catch(e){}queueNarratorIntroductions()}
 queueNarratorIntroductions();
 /* Voz: frase del relator cuando gana el equipo i (o campeon del torneo). */
 function voWin(i){const n=T[i].n[0]+T[i].n.slice(1).toLowerCase();vDone.add('final');speak(P.wins[i]>=3?'¡Tenemos campeón del torneo! '+n+' se lleva las tres copas. ¡Felicitaciones y gracias por jugar!':VW[vRound%VW.length].replace('{n}',n),null,true)}
-let roseSeenRound=-1,roseRaceN=0;
 setInterval(()=>{
- if(roseSeenRound!==vRound){roseSeenRound=vRound;roseRaceN++}
- if(over)return;const now=performance.now(),el=(now-vT0)/1000;
+ if(over)return;const now=performance.now();
  if(sprint&&!vDone.has('final')){vDone.add('final');speak(VF[vRound%VF.length],'¡Recta final!',true);return}
- const progress=Math.max(...S.map(x=>x.p));
- const call=nextEngagementCall(S.map(x=>x.p),vDone);
- if(call){
-  const key='engagement'+call.percent;
-  if(call.percent===50&&(vSess.has('turbo-rose')||(window.askRoseOn&&!window.askRoseOn())))vDone.add(key);
-  else if(!P.vo||!SS||vDone.has('final'))vDone.add(key);
-  else{
-   if(narratorQueue.some(item=>item.intro))return;
-   if(now-vLast<5000||SS.speaking||SS.pending)return;
-   if(speak(call.text,null,false)){vDone.add(key);if(call.percent===50)vSess.add('turbo-rose');return}
-  }
- }
- for(const l of VL){
-  if(vDone.has(l.id)||el<l.at)continue;
-  if(l.id==='intro'&&window.askRoseOn&&!window.askRoseOn()&&roseRaceN%2===0){vDone.add(l.id);continue}
-  if(l.once&&vSess.has(l.id)){vDone.add(l.id);continue} /* ya se dijo en esta sesion: NO repetir (infraccion a) */
-  if(!P.vo||vDone.has('final')){vDone.add(l.id);continue}
-  if(now-vLast<5000)break;
-  const vl=l.v[vRound%l.v.length];
-  if(speak(typeof vl==='function'?vl():vl,l.s,false)){vDone.add(l.id);if(l.once)vSess.add(l.id)}
-  break;
- }
 },500);
-/* CLUSS: al llegar al 15%, la voz anuncia una vez el siguiente rival, sorteado entre los clubes que no están jugando. */
-let pfRound=-1,pfT50=0,pfDone=false;
-setInterval(()=>{
- if(pfRound!==vRound){pfRound=vRound;pfT50=0;pfDone=false}
- if(over||pfDone||vDone.has('final'))return;
- const mx=Math.max(...S.map(x=>x.p)),now=performance.now();
- if(mx<50)return;
- if(!pfT50){pfT50=now;return}
- if(now-pfT50<10000||mx>=95)return;
- const w=S.findIndex(x=>x.p===mx),n=cap(T[w].n),en=!!(window.I18N&&window.I18N.en);
- const txt=en?'Fans of '+n+': if you send a perfume, '+n+' reaches the finish line and wins the race!':'¡Hinchas de '+n+'! Si envían un perfume, '+n+' llega a la meta y gana la carrera.';
- if(P.vo){if(SS&&(SS.speaking||SS.pending)||now-vLast<2500)return;if(!speak(txt,null,false))return}else say(txt);
- pfDone=true;
-},700);
 const PROGRESS_MILESTONES=[15,30,45,60,75,90],cap=n=>n[0]+n.slice(1).toLowerCase();
 setInterval(()=>{
  if(over||vDone.has('final'))return;
@@ -2391,8 +2331,8 @@ setInterval(()=>{
    if(S[team].p<percent||vDone.has(key))continue;
    const name=cap(T[team].n),en=!!(window.I18N&&window.I18N.en);
    const text=en
-    ?'Team '+name+' advanced '+percent+'%! Comment the club you support to help it move forward.'
-    :'¡El equipo '+name+' avanzó '+percent+'%! Comenta en el chat el club que apoyas para ayudarle a avanzar.';
+    ?'Team '+name+' has reached '+percent+'% progress.'
+    :'El equipo '+name+' llegó al '+percent+'% de avance.';
    if(speak(text,null,false))vDone.add(key);
    return;
   }
@@ -3165,7 +3105,7 @@ pinta();setInterval(pinta,1500);
 <script>
 (function(){
 const M=TOURNAMENT_OPTIONS.slice(),L=TOURNAMENT_LABELS,SHORT={libre:'LIBRE',clasico:'CLÁSICO',libertadores:'LIBERTADORES',champions:'CHAMPIONS',countries:'MUNDIAL',america:'AMÉRICA',elite:'ELITE'};
-let lock='libre';try{const v=SRV.get('cluss.torneoLock',null);if(v==='auto')lock=null;else if(M.includes(v))lock=v}catch(e){} /* por defecto: TORNEO LIBRE bloqueado */
+let lock='clasico'; /* cada carga inicia fijo en el torneo clásico */
 const foot=document.querySelector('#topbar .foot')||document.querySelector('.foot');if(!foot)return;
 const b=document.createElement('button');b.id='bTorneoSel';b.type='button';
 const fila=document.createElement('div');fila.id='filaVT';const ver=document.querySelector('.version');
@@ -4093,11 +4033,12 @@ function set(en){
  paint();
 }
 I.set=set;
-/* Idioma de arranque POR TORNEO: lo elige el usuario en el panel del boton de idioma (se guarda). Por defecto solo Libertadores arranca en espanol. */
-const LABELS=[['libre','TORNEO LIBRE'],['libertadores','LIBERTADORES'],['champions','CHAMPIONS'],['countries','COPA DEL MUNDO / WORLD CUP'],['america','COPA AMÉRICA'],['elite','ELITE NATIONS CUP']];
-const LSL='cluss.lang',DEFL={libre:'es',libertadores:'es',champions:'en',countries:'en',america:'en',elite:'en'};
+/* Cada carga arranca en español y en clásico; durante la sesión se puede cambiar idioma o torneo. */
+const LABELS=[['clasico',TOURNAMENT_LABELS.clasico],['libre','TORNEO LIBRE'],['libertadores','LIBERTADORES'],['champions','CHAMPIONS'],['countries','COPA DEL MUNDO / WORLD CUP'],['america','COPA AMÉRICA'],['elite','ELITE NATIONS CUP']];
+const LSL='cluss.lang',DEFL={clasico:'es',libre:'es',libertadores:'es',champions:'en',countries:'en',america:'en',elite:'en'};
 const pref=Object.assign({},DEFL);
 try{const v=SRV.get(LSL,null);if(v&&typeof v==='object')for(const k in DEFL)if(v[k]==='es'||v[k]==='en')pref[k]=v[k]}catch(e){}
+pref.clasico='es';
 const savePref=()=>{try{SRV.set(LSL,pref)}catch(e){}}; /* BACKEND: PUT /api/state/cluss.lang */
 const DEF=m=>(pref[m]||'en')==='en';
 let last=null;
@@ -4123,7 +4064,7 @@ pan.addEventListener('click',e=>{const t=e.target;
   last=k;set(DEF(k));cerrar()}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!pan.hidden)cerrar()});
 if(btn)btn.addEventListener('click',abrir);
-function mode(){try{return SRV.get('cluss.v1',{}).tournamentMode||'libre'}catch(e){return 'libre'}}
+function mode(){try{return SRV.get('cluss.v1',{}).tournamentMode||'clasico'}catch(e){return 'clasico'}}
 function poll(){const m=mode();if(m!==last){last=m;set(DEF(m))}}
 poll();setInterval(poll,500);paint();
 })();
@@ -4630,10 +4571,8 @@ render();
  toolsSource.addEventListener('game-settings',event=>{
   try{
    const settings=JSON.parse(event.data);
-   if(typeof window.setLiveAudienceSettings==='function'){
-    window.setLiveAudienceSettings(
-     settings.count,settings.audienceMultiplier,settings.giftTurboProgress,settings.tapTurboProgress,
-    );
+   if(typeof window.setLiveTurboSettings==='function'){
+    window.setLiveTurboSettings(settings.giftTurboProgress,settings.tapTurboProgress);
    }
   }catch(error){console.error('No se pudieron actualizar los ajustes del juego desde el servidor.',error)}
  });

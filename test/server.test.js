@@ -204,7 +204,7 @@ test('shares server game tools and gift counts across clients until manually res
     const initial = await fetch(`${baseUrl}/api/game-tools`).then((response) => response.json());
     assert.equal(initial.giftCount, 0);
     assert.ok(Number.isSafeInteger(initial.timerStartedAt));
-    assert.equal(initial.audienceMultiplier, 10);
+    assert.equal(Object.hasOwn(initial, 'audienceMultiplier'), false);
     assert.equal(initial.giftTurboProgress, 6);
     assert.equal(initial.tapTurboProgress, 3);
 
@@ -212,14 +212,13 @@ test('shares server game tools and gift counts across clients until manually res
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        audienceMultiplier: 6,
         giftTurboProgress: 8.5,
         tapTurboProgress: 4,
       }),
     });
     assert.equal(settingsResponse.status, 200);
     const gameSettings = await settingsResponse.json();
-    assert.equal(gameSettings.audienceMultiplier, 6);
+    assert.equal(Object.hasOwn(gameSettings, 'audienceMultiplier'), false);
     assert.equal(gameSettings.giftTurboProgress, 8.5);
     assert.equal(gameSettings.tapTurboProgress, 4);
     monitorService.emitAudienceCount(12);
@@ -268,7 +267,7 @@ test('shares server game tools and gift counts across clients until manually res
     const reset = await fetch(`${baseUrl}/api/game-tools/reset`, { method: 'POST' })
       .then((response) => response.json());
     assert.equal(reset.giftCount, 0);
-    assert.equal(reset.audienceMultiplier, 6, 'manual resets must preserve the server multiplier');
+    assert.equal(Object.hasOwn(reset, 'audienceMultiplier'), false);
     assert.equal(reset.giftTurboProgress, 8.5);
     assert.equal(reset.tapTurboProgress, 4);
     assert.ok(reset.timerStartedAt >= initial.timerStartedAt);

@@ -53,9 +53,9 @@ Selecciona el constructor **Dockerfile** para evitar la instalación de Nixpacks
 | `GET /api/config` | Usuario configurado. | `{ "username": "usuario" }` |
 | `PUT /api/config` | Guarda el usuario sin iniciar la conexión. | Envío: `{ "username": "@usuario" }`; respuesta: `{ "ok": true, "username": "usuario" }` |
 | `POST /api/reconnect` | Inicia o reinicia los reintentos; lo llama el navegador al cargar el overlay y su botón de estado. | JSON; `409` si falta cuenta o ya está conectado. |
-| `GET /api/game-tools` | Estado compartido del cronómetro, regalos y multiplicador persistente de audiencia. | `{ "timerStartedAt": 0, "giftCount": 0, "audienceMultiplier": 10 }` |
+| `GET /api/game-tools` | Estado compartido del cronómetro y contador de regalos, más los ajustes del turbo. | `{ "timerStartedAt": 0, "giftCount": 0, "giftTurboProgress": 6, "tapTurboProgress": 3 }` |
 | `GET /api/game-tools/events` | SSE para actualizar estado, audiencia y comandos remotos del overlay. | Eventos `game-tools`, `game-settings`, `overlay-status`, `whatsapp-status` y `game-command`. |
-| `PUT /api/game-tools/settings` | Guarda el multiplicador de audiencia y los avances de los turbos. | Envío: `{ "audienceMultiplier": 10, "giftTurboProgress": 6, "tapTurboProgress": 3 }`; el multiplicador admite enteros de 1 a 1000 y los porcentajes de 0 a 100. |
+| `PUT /api/game-tools/settings` | Guarda los avances de turbo por regalo y por límite de taps. | Envío: `{ "giftTurboProgress": 6, "tapTurboProgress": 3 }`; ambos porcentajes admiten valores de 0 a 100. El límite inicia en 100 y sube 10 taps por activación; la audiencia es informativa. |
 | `POST /api/game-tools/command` | Envía una herramienta del backend al overlay activo. | Envío: `{ "command": "sound-effects" }`; `400` si el comando no está permitido. |
 | `POST /api/game-tools/reset` | Reinicia manualmente el cronómetro y el contador compartido de regalos. | `{ "ok": true, "timerStartedAt": 0, "giftCount": 0 }` |
 | `POST /api/game-tools/overlay-heartbeat` | Recibe el estado visible del overlay; permite detectar si Android lo suspende o deja de reportar. | Envío: `{ "clientId": "android-overlay-01", "visible": true }` |
@@ -99,7 +99,7 @@ El servidor migra una sola vez los comentarios existentes de `data/tiktok/commen
 
 El navegador que carga el overlay inicia la conexión con reintentos cada 5 segundos durante un máximo de 5 minutos; si se agotan, el botón rojo permite reiniciarlos manualmente. El panel `/backend` también permite iniciar la conexión al guardar la cuenta; cargar el panel o arrancar el servidor no conecta TikTok.
 El overlay reporta su visibilidad al servidor cada 20 segundos y al apagarse la página; si el estado cambia de activo a inactivo, se envía un único aviso de WhatsApp cuando las alertas están habilitadas. La expiración por falta de señal es de 90 segundos.
-El límite de taps inicia en 10 por partida. Al completarlo, el próximo límite se calcula con el número actual de espectadores de `roomUser.totalUser` multiplicado por el ajuste guardado en el servidor (10 por defecto). Los avances totales de los turbos por regalo (6% por defecto durante 15 s) y por límite de taps (3% por defecto durante 7 s) también se configuran desde Herramientas en `/backend` y persisten entre reinicios.
+El overlay inicia en español con el torneo clásico bloqueado, alternando los duelos Olimpia–Cerro y Barcelona–Real Madrid. El límite de taps inicia en 100 y sube 10 después de cada activación, sin depender de la audiencia. La voz en off narra el avance sin pedir regalos ni interacciones. Los avances totales de los turbos por regalo (6% por defecto durante 15 s) y por límite de taps (3% por defecto durante 7 s) se configuran desde Herramientas en `/backend` y persisten entre reinicios.
 
 ## Estructura
 
