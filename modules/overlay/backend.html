@@ -60,6 +60,13 @@
       color: #cbd5d7;
       font-size: 12px;
     }
+    .deployment-signature {
+      padding-left: 9px;
+      border-left: 1px solid var(--border);
+      color: var(--muted);
+      font: 700 10px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+      white-space: nowrap;
+    }
     .status-dot {
       width: 7px;
       height: 7px;
@@ -179,7 +186,8 @@
     .footer a:hover { color: #fff; }
     @media (max-width: 520px) {
       body { padding: 0 14px 40px; }
-      .topbar { min-height: 64px; margin-bottom: 25px; }
+      .topbar { min-height: 64px; margin-bottom: 25px; gap: 8px; flex-wrap: wrap; }
+      .status-pill { max-width: 100%; }
       .account-form { grid-template-columns: 1fr; }
       .account-form label { grid-column: auto; }
       .card-heading { align-items: flex-start; }
@@ -196,6 +204,7 @@
       <div class="status-pill" aria-live="polite">
         <i id="status-indicator" class="status-dot"></i>
         <span id="status">Conectando…</span>
+        <span id="deployment-signature" class="deployment-signature" aria-label="Versión del backend">deploy:…</span>
       </div>
     </header>
     <main>
@@ -306,6 +315,7 @@
     const usernameInput = document.querySelector('#username');
     const status = document.querySelector('#status');
     const statusIndicator = document.querySelector('#status-indicator');
+    const deploymentSignature = document.querySelector('#deployment-signature');
     const message = document.querySelector('#message');
     const statsToggle = document.querySelector('#stats-toggle');
     const statsPanel = document.querySelector('#stats-panel');
@@ -435,6 +445,17 @@
       showStatus(await statusResponse.json());
     }
 
+    async function loadDeploymentSignature() {
+      const response = await fetch('/api/deployment-signature', { cache: 'no-store' });
+      if (!response.ok) throw new Error('No se pudo consultar la versión del backend.');
+      const result = await response.json();
+      if (typeof result.signature !== 'string' || !/^sha256-[a-f0-9]{16}$/.test(result.signature)) {
+        throw new Error('El backend devolvió una firma de versión no válida.');
+      }
+      deploymentSignature.textContent = `deploy:${result.signature.slice(-8)}`;
+      deploymentSignature.title = `Firma del backend: ${result.signature}`;
+    }
+
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       message.textContent = '';
@@ -534,6 +555,11 @@
     toolsSource.addEventListener('overlay-status', (event) => renderOverlayStatus(JSON.parse(event.data)));
     toolsSource.addEventListener('whatsapp-status', (event) => renderWhatsAppConfig(JSON.parse(event.data)));
     loadConfiguration().catch((error) => { message.textContent = error.message; });
+    loadDeploymentSignature().catch((error) => {
+      deploymentSignature.textContent = 'deploy:error';
+      deploymentSignature.title = error.message;
+      console.error('No se pudo cargar la versión del backend.', error);
+    });
     loadWhatsAppSettings().catch((error) => { whatsappMessage.textContent = error.message; });
   </script>
 </body>

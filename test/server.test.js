@@ -110,6 +110,8 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
       .map(([, command]) => command);
     assert.deepEqual(toolCommands, ['turbo-down', 'turbo-up', 'refresh']);
     assert.match(backendHtml, /id="status"/);
+    assert.match(backendHtml, /id="deployment-signature"/);
+    assert.match(backendHtml, /fetch\('\/api\/deployment-signature'/);
     assert.match(backendHtml, /id="tools-panel"/);
     assert.doesNotMatch(backendHtml, /id="tools-toggle"|game-settings-form|reset-game-tools/);
     assert.match(backendHtml, /id="whatsapp-enable"/);
