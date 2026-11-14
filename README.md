@@ -46,12 +46,16 @@ Selecciona el constructor **Dockerfile** para evitar la instalación de Nixpacks
 | `DELETE /api/log/chat-texts` | Vacía el archivo de comentarios. | `{ "ok": true }` |
 | `GET /api/log/chat-texts.json` o `/api/log/chat-texts.txt` | Descarga los comentarios anónimos como archivo adjunto. | Archivo |
 | `GET /api/activity-policy.js` | Sirve la política de actividad usada por el overlay. | JavaScript |
-| `GET /backend` | Configurar la cuenta y ver estadísticas de comentarios y copas por país. | HTML |
+| `GET /backend` | Configurar la cuenta, administrar herramientas compartidas del juego y ver estadísticas. | HTML |
 | `GET /health` | Comprobar que el servidor responde. | `{ "ok": true }` |
 | `GET /api/status` | Estado actual y diagnóstico del conector. | JSON |
 | `GET /api/config` | Usuario configurado. | `{ "username": "usuario" }` |
 | `PUT /api/config` | Guarda el usuario sin iniciar la conexión. | Envío: `{ "username": "@usuario" }`; respuesta: `{ "ok": true, "username": "usuario" }` |
 | `POST /api/reconnect` | Inicia o reinicia los reintentos; lo llama el navegador al cargar el overlay y su botón de estado. | JSON; `409` si falta cuenta o ya está conectado. |
+| `GET /api/game-tools` | Estado compartido del cronómetro y el contador persistente de regalos. | `{ "timerStartedAt": 0, "giftCount": 0 }` |
+| `GET /api/game-tools/events` | SSE para actualizar el estado y enviar comandos remotos al overlay. | Eventos `game-tools` y `game-command`. |
+| `POST /api/game-tools/command` | Envía una herramienta del backend al overlay activo. | Envío: `{ "command": "sound-effects" }`; `400` si el comando no está permitido. |
+| `POST /api/game-tools/reset` | Reinicia manualmente el cronómetro y el contador compartido de regalos. | `{ "ok": true, "timerStartedAt": 0, "giftCount": 0 }` |
 | `GET /api/comment-stats` | Conteo persistente de comentarios mencionando cada país y comentarios sin país. | JSON |
 | `GET /api/cup-stats` | Copas ganadas acumuladas por país. | JSON |
 | `POST /api/cup-stats` | Registra una copa al terminar una ronda. | Envío: `{ "code": "PY" }`; respuesta: estadísticas actualizadas. |

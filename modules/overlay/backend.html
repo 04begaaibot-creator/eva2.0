@@ -161,6 +161,13 @@
     .stats-table tbody tr:hover { background: rgba(255, 255, 255, .025); }
     .stats-table td:nth-child(2) { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11px; }
     .stats-table td:last-child, .stats-table th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    .tools-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .tools-metric { padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: rgba(9, 15, 17, .45); }
+    .tools-metric span { display: block; color: var(--muted); font-size: 11px; }
+    .tools-metric strong { display: block; margin-top: 4px; font-size: 22px; font-variant-numeric: tabular-nums; }
+    .tool-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; margin-top: 14px; }
+    .tool-actions .button { min-height: 40px; }
+    .tool-note { margin: 12px 0 0; color: var(--muted); font-size: 12px; }
     .footer { margin-top: 22px; text-align: center; }
     .footer a { color: #9dafb2; font-size: 12px; text-decoration: none; }
     .footer a:hover { color: #fff; }
@@ -200,6 +207,41 @@
           <button class="button" type="submit">Guardar y conectar</button>
         </form>
         <p id="message" role="status"></p>
+      </section>
+      <section class="card" aria-labelledby="tools-heading">
+        <div class="card-heading">
+          <div>
+            <h2 id="tools-heading">Herramientas del juego</h2>
+            <span class="subtle">Controles compartidos con el overlay abierto.</span>
+          </div>
+          <button id="tools-toggle" class="button secondary" type="button" aria-expanded="false" aria-controls="tools-panel">
+            Mostrar herramientas
+          </button>
+        </div>
+        <div id="tools-panel" hidden>
+          <div class="tools-metrics">
+            <div class="tools-metric"><span>Cronómetro del servidor</span><strong id="server-timer">00:00:00</strong></div>
+            <div class="tools-metric"><span>Regalos recibidos</span><strong id="server-gifts">0</strong></div>
+          </div>
+          <div class="tool-actions">
+            <button class="button secondary" type="button" data-command="language">🌐 Cambiar idioma</button>
+            <button class="button secondary" type="button" data-command="narrator">🗣️ Narrador Don Tortu</button>
+            <button class="button secondary" type="button" data-command="chat-voice">🎙️ Lectura del chat</button>
+            <button class="button secondary" type="button" data-command="sound-effects">🔊 Efectos de sonido</button>
+            <button class="button secondary" type="button" data-command="statistics">📊 Estadísticas</button>
+            <button class="button secondary" type="button" data-command="reset-cups">↺ Reiniciar copas</button>
+            <button class="button secondary" type="button" data-command="turbo-down">➖ Bajar límite turbo</button>
+            <button class="button secondary" type="button" data-command="turbo-up">➕ Subir límite turbo</button>
+            <button class="button secondary" type="button" data-command="tournament">🏆 Cambiar torneo</button>
+            <button class="button secondary" type="button" data-command="cta">🎁 Herramientas CTA</button>
+            <button class="button secondary" type="button" data-command="flags">🚩 Banderas</button>
+            <button class="button secondary" type="button" data-command="rose-prompt">🌹 Aviso de rositas</button>
+            <button class="button secondary" type="button" data-command="refresh">🔄 Actualizar página del cliente</button>
+            <button id="reset-game-tools" class="button" type="button">Reiniciar cronómetro y regalos</button>
+          </div>
+          <p id="tools-message" role="status" class="tool-note"></p>
+          <p class="tool-note">Los comandos se envían por el servidor al overlay activo. El cronómetro y los regalos se comparten y solo se reinician con el botón.</p>
+        </div>
       </section>
       <section class="card" aria-labelledby="stats-heading">
         <div class="card-heading">
@@ -249,6 +291,12 @@
     const statsMessage = document.querySelector('#stats-message');
     const commentRows = document.querySelector('#comment-rows');
     const cupRows = document.querySelector('#cup-rows');
+    const toolsToggle = document.querySelector('#tools-toggle');
+    const toolsPanel = document.querySelector('#tools-panel');
+    const toolsMessage = document.querySelector('#tools-message');
+    const serverTimer = document.querySelector('#server-timer');
+    const serverGifts = document.querySelector('#server-gifts');
+    let gameToolsState = { timerStartedAt: Date.now(), giftCount: 0 };
     function showStatus(state) {
       status.textContent = `${state.status || 'desconectado'}${state.username ? ` (@${state.username})` : ''}`;
       statusIndicator.classList.toggle('connected', Boolean(state.connected));
@@ -256,6 +304,40 @@
         'connecting',
         ['connecting', 'reconnecting'].includes(state.status),
       );
+    }
+
+    function renderGameTools(state) {
+      if (!Number.isSafeInteger(state?.timerStartedAt) || !Number.isSafeInteger(state?.giftCount)) return;
+      gameToolsState = state;
+      serverGifts.textContent = state.giftCount.toLocaleString('es-PY');
+      renderServerTimer();
+    }
+
+    function renderServerTimer() {
+      const elapsed = Math.max(0, Math.floor((Date.now() - gameToolsState.timerStartedAt) / 1000));
+      const pad = (value) => String(value).padStart(2, '0');
+      serverTimer.textContent = `${pad(Math.floor(elapsed / 3600))}:${pad(Math.floor((elapsed % 3600) / 60))}:${pad(elapsed % 60)}`;
+    }
+
+    async function sendGameCommand(command) {
+      if (command === 'refresh' && !window.confirm('¿Actualizar la página del cliente ahora?')) return;
+      const response = await fetch('/api/game-tools/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'No se pudo enviar el comando.');
+      toolsMessage.textContent = 'Comando enviado al overlay.';
+    }
+
+    async function resetGameTools() {
+      if (!window.confirm('¿Reiniciar el cronómetro y el contador de regalos compartidos?')) return;
+      const response = await fetch('/api/game-tools/reset', { method: 'POST' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'No se pudieron reiniciar los contadores.');
+      renderGameTools(result);
+      toolsMessage.textContent = 'Cronómetro y contador de regalos reiniciados.';
     }
 
     async function loadConfiguration() {
@@ -341,6 +423,34 @@
       }
     });
 
+    toolsToggle.addEventListener('click', () => {
+      const isOpening = toolsPanel.hidden;
+      toolsPanel.hidden = !isOpening;
+      toolsToggle.setAttribute('aria-expanded', String(isOpening));
+      toolsToggle.textContent = isOpening ? 'Ocultar herramientas' : 'Mostrar herramientas';
+      if (isOpening) {
+        toolsMessage.textContent = '';
+        fetch('/api/game-tools')
+          .then(async (response) => {
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'No se pudieron cargar las herramientas.');
+            renderGameTools(result);
+          })
+          .catch((error) => { toolsMessage.textContent = error.message; });
+      }
+    });
+
+    toolsPanel.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-command]');
+      if (button) {
+        sendGameCommand(button.dataset.command).catch((error) => { toolsMessage.textContent = error.message; });
+      }
+    });
+    document.querySelector('#reset-game-tools').addEventListener('click', () => {
+      resetGameTools().catch((error) => { toolsMessage.textContent = error.message; });
+    });
+    setInterval(renderServerTimer, 1000);
+
     const source = new EventSource('/api/events');
     source.addEventListener('status', (event) => showStatus(JSON.parse(event.data)));
     source.addEventListener('comment-stats', (event) => renderCommentStats(JSON.parse(event.data)));
@@ -348,6 +458,15 @@
       const stats = JSON.parse(event.data);
       renderRows(cupRows, stats.countries, 'cups');
     });
+    const toolsSource = new EventSource('/api/game-tools/events');
+    toolsSource.addEventListener('game-tools', (event) => renderGameTools(JSON.parse(event.data)));
+    fetch('/api/game-tools')
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'No se pudieron cargar las herramientas.');
+        renderGameTools(result);
+      })
+      .catch((error) => { toolsMessage.textContent = error.message; });
     loadConfiguration().catch((error) => { message.textContent = error.message; });
   </script>
 </body>

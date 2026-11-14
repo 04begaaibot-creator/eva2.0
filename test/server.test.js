@@ -85,7 +85,12 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
   try {
     const backendResponse = await fetch(`${baseUrl}/backend`);
     assert.equal(backendResponse.status, 200);
-    assert.match(await backendResponse.text(), /fetch\('\/api\/reconnect', \{ method: 'POST' \}\)/);
+    const backendHtml = await backendResponse.text();
+    assert.match(backendHtml, /fetch\('\/api\/reconnect', \{ method: 'POST' \}\)/);
+    assert.match(backendHtml, /id="tools-toggle"/);
+    assert.match(backendHtml, /data-command="reset-cups"/);
+    assert.match(backendHtml, /data-command="refresh"/);
+    assert.match(backendHtml, /\/api\/game-tools\/reset/);
     assert.equal(monitorService.state.isConnected, false, 'opening the backend must not connect TikTok');
 
     const rootResponse = await fetch(baseUrl);
@@ -97,7 +102,10 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.match(servedHtml, /new EventSource\('\/api\/events'\)/);
     assert.match(servedHtml, /source\.addEventListener\('status'/);
     assert.match(servedHtml, /source\.addEventListener\('update'/);
-    assert.match(servedHtml, /button\.id='bLiveEvents'/);
+    assert.match(servedHtml, /toolsSource\.addEventListener\('game-command'/);
+    assert.match(servedHtml, /if\(command==='refresh'\)\{location\.reload\(\);return\}/);
+    assert.doesNotMatch(servedHtml, /button\.id='bArch'|button\.id='bLiveEvents'/);
+    assert.doesNotMatch(servedHtml, /b2\.title=need\?/);
     assert.match(servedHtml, /fetch\('\/api\/connect'/);
     assert.match(servedHtml, /recordReceivedEvent\('update'/);
     assert.match(servedHtml, /window\.addEventListener\('load',registerLiveProcessor,\{once:true\}\)/);
@@ -138,7 +146,7 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.equal((await fetch(`${baseUrl}/v45.html`)).status, 404);
     const serviceWorker = await fetch(`${baseUrl}/sw.js`);
     assert.equal(serviceWorker.status, 200);
-    assert.match(await serviceWorker.text(), /tortu-shell-v13/);
+    assert.match(await serviceWorker.text(), /tortu-shell-v14/);
     assert.equal((await fetch(`${baseUrl}/activity-policy.js`)).status, 200);
     assert.equal((await fetch(`${baseUrl}/api/activity-policy.js`)).status, 200);
     const manifest = await fetch(`${baseUrl}/manifest.webmanifest`);
@@ -151,6 +159,75 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
       ok: true,
     });
   } finally {
+    await close(server);
+  }
+});
+
+test('shares server game tools and gift counts across clients until manually reset', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tortu-game-tools-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const monitorService = createMonitorService();
+  const { server } = createWebserver({
+    configurationPath: path.join(directory, 'config.json'),
+    overlayDataPath: path.join(directory, 'overlay'),
+    monitorService,
+  });
+  const baseUrl = await listen(server);
+  let reader;
+
+  try {
+    const initial = await fetch(`${baseUrl}/api/game-tools`).then((response) => response.json());
+    assert.equal(initial.giftCount, 0);
+    assert.ok(Number.isSafeInteger(initial.timerStartedAt));
+
+    const eventResponse = await fetch(`${baseUrl}/api/game-tools/events`);
+    reader = eventResponse.body.getReader();
+    await readEvent(reader, 'game-tools');
+
+    const commandResponse = await fetch(`${baseUrl}/api/game-tools/command`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'sound-effects' }),
+    });
+    assert.deepEqual(await commandResponse.json(), { ok: true, command: 'sound-effects' });
+    const commandEvent = await readEvent(reader, 'game-command');
+    assert.match(commandEvent, /"command":"sound-effects"/);
+
+    const refreshResponse = await fetch(`${baseUrl}/api/game-tools/command`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'refresh' }),
+    });
+    assert.deepEqual(await refreshResponse.json(), { ok: true, command: 'refresh' });
+    assert.match(await readEvent(reader, 'game-command'), /"command":"refresh"/);
+
+    monitorService.emit({ type: 'gift', activityCount: 3, username: 'viewer' });
+    const giftEvent = await readEvent(reader, 'game-tools');
+    assert.match(giftEvent, /"giftCount":3/);
+    assert.equal(
+      (await fetch(`${baseUrl}/api/game-tools`).then((response) => response.json())).giftCount,
+      3,
+    );
+
+    const invalidCommand = await fetch(`${baseUrl}/api/game-tools/command`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'not-a-tool' }),
+    });
+    assert.equal(invalidCommand.status, 400);
+
+    const reset = await fetch(`${baseUrl}/api/game-tools/reset`, { method: 'POST' })
+      .then((response) => response.json());
+    assert.equal(reset.giftCount, 0);
+    assert.ok(reset.timerStartedAt >= initial.timerStartedAt);
+    const { ok, ...savedReset } = reset;
+    assert.equal(ok, true);
+    assert.deepEqual(
+      JSON.parse(fs.readFileSync(path.join(directory, 'overlay', 'state', 'Y2x1c3MuZ2FtZVRvb2xz.json'), 'utf8')),
+      savedReset,
+    );
+  } finally {
+    if (reader) await reader.cancel();
     await close(server);
   }
 });

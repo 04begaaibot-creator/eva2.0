@@ -5,6 +5,7 @@ const { createSseHub } = require('./modules/realtime/sseHub');
 const { createTikTokModule, createTikTokMonitorService } = require('./modules/tiktok');
 const { registerOverlayRoutes } = require('./modules/overlay');
 const { createOverlayPersistenceService } = require('./modules/overlay/persistenceService');
+const { createGameToolsService } = require('./modules/overlay/gameToolsService');
 
 function createWebserver({
   configurationPath = process.env.TIKTOK_CONFIG_PATH
@@ -26,9 +27,11 @@ function createWebserver({
     directoryPath: overlayDataPath || path.join(path.dirname(configurationPath), 'overlay'),
     legacyChatArchivePath: savedCommentArchivePath,
   });
+  const gameTools = createGameToolsService({ persistence, stream: eventStream });
   const tiktok = createTikTokModule({
     stream: eventStream,
     monitorService,
+    onEvent: gameTools.recordEvent,
     configurationPath,
     commentStatsPath: commentStatsPath
       || path.join(path.dirname(configurationPath), 'comment-stats.json'),
@@ -41,7 +44,7 @@ function createWebserver({
   });
 
   app.use(express.json({ limit: '1mb', strict: false }));
-  registerOverlayRoutes(app, { persistence });
+  registerOverlayRoutes(app, { persistence, gameTools });
   tiktok.registerRoutes(app);
 
   app.get('/health', (request, response) => {

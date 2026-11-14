@@ -12,6 +12,7 @@ const maxEvents = 100;
 function createTikTokModule({
   stream,
   monitorService = createTikTokMonitorService(),
+  onEvent = () => {},
   configurationPath = process.env.TIKTOK_CONFIG_PATH
     || path.join(__dirname, '..', '..', 'data', 'tiktok', 'config.json'),
   commentStatsPath = process.env.TIKTOK_COMMENT_STATS_PATH,
@@ -73,6 +74,7 @@ function createTikTokModule({
         { stage: 'backend_received', time: new Date().toISOString() },
       ],
     };
+    onEvent(eventEntry);
     events.unshift(eventEntry);
     events.length = Math.min(events.length, maxEvents);
     state.lastEventAt = eventEntry.time || new Date().toISOString();

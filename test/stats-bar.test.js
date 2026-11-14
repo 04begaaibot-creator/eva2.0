@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'v21.html'), 'utf8');
@@ -68,21 +69,52 @@ test('team tap counters omit the turbo badge and use the freed width for the cou
   assert.match(html, /\.hb em\{justify-content:flex-start;left:20px;right:2px/);
 });
 
-test('tap levels begin at 25 percent and the tap limit returns to its minimum by the finish', () => {
+test('dynamic turbo tap limit rises at 25 percent and returns to minimum by the finish', () => {
   assert.match(html, /LEVEL_PROGRESS_START=25,LEVEL_DESCENT_FROM=75,LEVEL_DESCENT_STEP=1\.25/);
   assert.match(html, /progress<LEVEL_PROGRESS_START\?LEVEL_TAPS/);
-  assert.match(html, /HEART_N>tapLevelMaxN&&progress>=LEVEL_PROGRESS_START/);
   assert.match(html, /LEVEL_MAX_TAPS-LEVEL_TAPS\*Math\.floor\(\(progress-LEVEL_DESCENT_FROM\)\/LEVEL_DESCENT_STEP\)/);
+  assert.doesNotMatch(html, /nivelBadge|tapLevelMaxN/);
 });
 
 test('each team shows its live-wide event total in compact K and M notation', () => {
   assert.match(html, /class="team-total" id="teamTotal\$\{i\}"/);
   assert.match(html, /const teamEventTotals=new Map\(\)/);
-  assert.match(html, /addTeamEventTotal\(team,TAP_POLICY\.statEventDelta\(type,count\)\)/);
+  assert.match(html, /window\.addTeamEventTotal\(team,TAP_POLICY\.statEventDelta\(type,count\)\)/);
   assert.match(html, /teamEventTotals\.set\(teamId,\(teamEventTotals\.get\(teamId\)\|\|0\)\+count\)/);
   assert.match(html, /teamEventTotals\.get\(T\[team\]\.id\)\|\|0/);
-  assert.match(html, /update\(\);T\.forEach\(\(_,i\)=>renderTeamEventTotal\(i\)\)/);
+  assert.match(html, /update\(\);T\.forEach\(\(_,i\)=>window\.renderTeamEventTotal\(i\)\)/);
+  assert.match(html, /window\.addTeamEventTotal=addTeamEventTotal;\s*window\.renderTeamEventTotal=renderTeamEventTotal;/);
   assert.match(html, /row\.querySelector\('b'\)\.textContent=stFmt\(total\)/);
+});
+
+test('team names appear below each header flag and refresh when the duel changes', () => {
+  assert.match(html, /\.cnTop\{display:block;position:relative/);
+  assert.match(html, /let el=hd\.querySelector\('\.cnTop'\);if\(!el\).*?hd\.appendChild\(el\)/);
+  assert.match(html, /const n=I18N\.tr\(String\(T\[i\]\.n\|\|''\)\.toUpperCase\(\)\)/);
+  assert.match(html, /if\(el\.textContent!==n\)\{el\.textContent=n;cambio=true\}/);
+  assert.match(html, /\.hd \.cn\{display:none!important\}/);
+});
+
+test('v30 gift layer reacts to gifts and supplies honor, turbo, and voice hooks', () => {
+  assert.match(html, /<style id="gami22">/);
+  assert.match(html, /function registerGift\(e\)/);
+  assert.match(html, /function voice\(g\)/);
+  assert.match(html, /window\.gami=\{level:LV,honor:HM,voice,/);
+  assert.match(html, /window\.__gamiTurbo=\{turbo:turbo,giftTurboUntil:giftTurboUntil\}/);
+  assert.match(html, /window\.gami&&window\.gami\.voice&&window\.gami\.voice\(g\)/);
+});
+
+test('activity policy fallback repairs a cached frozen policy missing team assignment', () => {
+  const fallback = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)]
+    .map(([, source]) => source)
+    .find((source) => source.includes('si /activity-policy.js no carga'));
+  assert.ok(fallback, 'activity policy fallback script should exist');
+  const window = {
+    TORTUWORLD_ACTIVITY_POLICY: Object.freeze({ statEventDelta: () => 1 }),
+  };
+  vm.runInNewContext(fallback, { window });
+  assert.equal(window.TORTUWORLD_ACTIVITY_POLICY.resolveSupportSide('a', 2), 1);
+  assert.equal(window.TORTUWORLD_ACTIVITY_POLICY.statEventDelta('chat'), 1);
 });
 
 test('voiceover announces only the rose turbo prompt at each race start', () => {
@@ -118,12 +150,12 @@ test('race reset releases round-only caches and voice queues', () => {
   assert.match(html, /reset=function\(\)\{ultimo\.clear\(\);return _reset\.apply\(this,arguments\)\}/);
 });
 
-test('mobile overlay bounds canvas effects and shows available resource percentages', () => {
+test('mobile overlay bounds canvas effects without resource or level indicators', () => {
   assert.match(html, /const LOW_MEMORY_DEVICE=Number\(navigator\.deviceMemory\)>0&&Number\(navigator\.deviceMemory\)<=4/);
   assert.match(html, /DPR=Math\.min\(LOW_MEMORY_DEVICE\?1\.25:2/);
   assert.match(html, /MAXP=LOW_MEMORY_DEVICE\?180:420/);
   assert.match(html, /LIVE_DIAGNOSTIC_LIMIT=1000,LIVE_EVENT_ID_CACHE_LIMIT=300/);
-  assert.ok(html.includes("meter.textContent='MEM '+(heap==null?'--':heap)+'% · CPU* '+(cpu==null?'--':cpu)+'%'"));
+  assert.doesNotMatch(html, /resourceMeter|CPU\*|nivelBadge/);
 });
 
 test('statistics bar updates from real events and renders the live tap and idle values', () => {

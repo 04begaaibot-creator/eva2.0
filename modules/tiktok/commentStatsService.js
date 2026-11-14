@@ -98,47 +98,49 @@ function createCommentStatsService({ filePath }) {
 
   try {
     const raw = fs.readFileSync(filePath, 'utf8');
-    if (raw.includes('\0')) {
-      throw new SyntaxError('El archivo de estadísticas está corrupto.');
-    }
-    const saved = JSON.parse(raw);
-    if (!saved || typeof saved !== 'object' || Array.isArray(saved)
-      || !saved.counts || typeof saved.counts !== 'object' || Array.isArray(saved.counts)) {
-      throw new Error('El archivo de estadísticas de comentarios no es válido.');
-    }
-    for (const [code, value] of Object.entries(saved.counts)) {
-      if (Object.hasOwn(counts, code)) {
-        if (!Number.isSafeInteger(value) || value < 0) {
-          throw new Error(`El conteo de comentarios de ${code} no es válido.`);
+    const sanitized = raw.replace(/\u0000/g, '');
+    if (!sanitized.trim()) {
+      resetState();
+    } else {
+      const saved = JSON.parse(sanitized);
+      if (!saved || typeof saved !== 'object' || Array.isArray(saved)
+        || !saved.counts || typeof saved.counts !== 'object' || Array.isArray(saved.counts)) {
+        throw new Error('El archivo de estadísticas de comentarios no es válido.');
+      }
+      for (const [code, value] of Object.entries(saved.counts)) {
+        if (Object.hasOwn(counts, code)) {
+          if (!Number.isSafeInteger(value) || value < 0) {
+            throw new Error(`El conteo de comentarios de ${code} no es válido.`);
+          }
+          counts[code] = value;
         }
-        counts[code] = value;
       }
-    }
-    if (saved.cups !== undefined
-      && (!saved.cups || typeof saved.cups !== 'object' || Array.isArray(saved.cups))) {
-      throw new Error('Las copas guardadas no son válidas.');
-    }
-    for (const [code, value] of Object.entries(saved.cups || {})) {
-      if (Object.hasOwn(cups, code)) {
-        if (!Number.isSafeInteger(value) || value < 0) {
-          throw new Error(`El conteo de copas de ${code} no es válido.`);
+      if (saved.cups !== undefined
+        && (!saved.cups || typeof saved.cups !== 'object' || Array.isArray(saved.cups))) {
+        throw new Error('Las copas guardadas no son válidas.');
+      }
+      for (const [code, value] of Object.entries(saved.cups || {})) {
+        if (Object.hasOwn(cups, code)) {
+          if (!Number.isSafeInteger(value) || value < 0) {
+            throw new Error(`El conteo de copas de ${code} no es válido.`);
+          }
+          cups[code] = value;
         }
-        cups[code] = value;
       }
-    }
-    if (saved.unassigned !== undefined) {
-      if (!Number.isSafeInteger(saved.unassigned) || saved.unassigned < 0) {
-        throw new Error('El conteo de comentarios sin país no es válido.');
+      if (saved.unassigned !== undefined) {
+        if (!Number.isSafeInteger(saved.unassigned) || saved.unassigned < 0) {
+          throw new Error('El conteo de comentarios sin país no es válido.');
+        }
+        unassigned = saved.unassigned;
       }
-      unassigned = saved.unassigned;
-    }
-    if (saved.updatedAt !== undefined) {
-      if (saved.updatedAt === null) {
-        updatedAt = null;
-      } else if (typeof saved.updatedAt !== 'string' || Number.isNaN(Date.parse(saved.updatedAt))) {
-        throw new Error('La fecha de estadísticas guardada no es válida.');
-      } else {
-        updatedAt = saved.updatedAt;
+      if (saved.updatedAt !== undefined) {
+        if (saved.updatedAt === null) {
+          updatedAt = null;
+        } else if (typeof saved.updatedAt !== 'string' || Number.isNaN(Date.parse(saved.updatedAt))) {
+          throw new Error('La fecha de estadísticas guardada no es válida.');
+        } else {
+          updatedAt = saved.updatedAt;
+        }
       }
     }
   } catch (error) {
