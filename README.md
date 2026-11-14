@@ -40,7 +40,7 @@ Selecciona el constructor **Dockerfile** para evitar la instalación de Nixpacks
 
 | Método y ruta | Uso | Respuesta |
 |---|---|---|
-| `GET /`, `/overlay`, `/tortugas.html`, `/tortugas_tiktok.html` o `/v2.0.html` | Overlay v21; el backend implementa el contrato de persistencia declarado por el overlay. | HTML |
+| `GET /`, `/overlay`, `/tortugas.html`, `/tortugas_tiktok.html` o `/v2.0.html` | Overlay principal; el backend implementa el contrato de persistencia declarado por el overlay. | HTML |
 | `GET /api/state.js` | Inicializa `window.CLUSS_STATE` con los documentos pequeños persistidos, sin incluir logs de rondas. | JavaScript sin caché |
 | `GET`, `PUT` o `DELETE /api/state/:clave` | Lee, guarda o borra un documento JSON del overlay; `GET` devuelve `404` si no existe. | JSON |
 | `POST /api/log/chat-texts` o `/api/log/user-events` | Agrega un lote de hasta 200 registros; los textos de chat no incluyen autor y los eventos de usuario se retienen hasta 90 días. | JSON |
@@ -55,7 +55,7 @@ Selecciona el constructor **Dockerfile** para evitar la instalación de Nixpacks
 | `POST /api/reconnect` | Inicia o reinicia los reintentos; lo llama el navegador al cargar el overlay y su botón de estado. | JSON; `409` si falta cuenta o ya está conectado. |
 | `GET /api/game-tools` | Estado compartido del cronómetro y contador de regalos, más los ajustes del turbo. | `{ "timerStartedAt": 0, "giftCount": 0, "giftTurboProgress": 6, "tapTurboProgress": 3 }` |
 | `GET /api/game-tools/events` | SSE para actualizar estado, audiencia y comandos remotos del overlay. | Eventos `game-tools`, `game-settings`, `overlay-status`, `whatsapp-status` y `game-command`. |
-| `PUT /api/game-tools/settings` | Guarda los avances de turbo por regalo y por límite de taps. | Envío: `{ "giftTurboProgress": 6, "tapTurboProgress": 3 }`; ambos porcentajes admiten valores de 0 a 100. El límite inicia en 100 y sube 10 taps por activación; la audiencia es informativa. |
+| `PUT /api/game-tools/settings` | Guarda los avances de turbo por regalo y por límite de taps. | Envío: `{ "giftTurboProgress": 6, "tapTurboProgress": 3 }`; ambos porcentajes admiten valores de 0 a 100. El límite inicia en 50 y sube 10 taps por cada 10% de avance; la audiencia es informativa. |
 | `POST /api/game-tools/command` | Envía una herramienta del backend al overlay activo. | Envío: `{ "command": "sound-effects" }`; `400` si el comando no está permitido. |
 | `POST /api/game-tools/reset` | Reinicia manualmente el cronómetro y el contador compartido de regalos. | `{ "ok": true, "timerStartedAt": 0, "giftCount": 0 }` |
 | `POST /api/game-tools/overlay-heartbeat` | Recibe el estado visible del overlay; permite detectar si Android lo suspende o deja de reportar. | Envío: `{ "clientId": "android-overlay-01", "visible": true }` |
@@ -72,9 +72,9 @@ Selecciona el constructor **Dockerfile** para evitar la instalación de Nixpacks
 | `GET /api/comment-archive/stats` | Cantidad de comentarios guardados. | JSON |
 | `GET /api/comment-archive` o `/api/comment-archive.txt` | Descarga comentarios sin nombres de usuario como JSON o TXT. | Archivo |
 | `POST /api/comment-archive/reset` | Vacía el archivo de comentarios. | Envío requerido: `{ "confirm": true }`. |
-| `GET /api/events` | Flujo SSE consumido por v21. | Solo eventos `status` y `update`. |
+| `GET /api/events` | Flujo SSE consumido por `overlay.html`. | Solo eventos `status` y `update`. |
 
-Un usuario vacío o inválido al guardar devuelve `400`. El evento SSE `status` informa el estado de conexión; cada `update` contiene un único evento real dentro de `entry`, como requiere v21:
+Un usuario vacío o inválido al guardar devuelve `400`. El evento SSE `status` informa el estado de conexión; cada `update` contiene un único evento real dentro de `entry`, como requiere `overlay.html`:
 
 ```json
 {
@@ -93,13 +93,13 @@ Un usuario vacío o inválido al guardar devuelve `400`. El evento SSE `status` 
 
 Los tipos dependen de los eventos que entregue TikTok; incluyen chat, regalos, likes, seguidores, compartidos, entradas y otros eventos del LIVE. `displayName` es opcional y contiene el alias visible del usuario cuando TikTok lo proporciona; `activityCount` y `diamondCount` solo aparecen cuando aplican. El conector conserva los valores del proveedor para que cada mini app decida cómo presentarlos.
 
-El overlay `v21.html` consume los eventos reales de `/api/events` y mantiene en el servidor el estado del juego, los votos y las estadísticas. `GET /api/state.js` solo incluye documentos pequeños; los logs de ronda se solicitan por clave cuando hacen falta. Los textos del chat se guardan como registros anónimos en `data/tiktok/overlay/logs/chat-texts.jsonl`; el flujo `user-events`, que contiene nombres, se divide por día y se elimina después de 90 días. No existe una ruta de lectura para ese historial personal.
+El overlay `overlay.html` consume los eventos reales de `/api/events` y mantiene en el servidor el estado del juego, los votos y las estadísticas. `GET /api/state.js` solo incluye documentos pequeños; los logs de ronda se solicitan por clave cuando hacen falta. Los textos del chat se guardan como registros anónimos en `data/tiktok/overlay/logs/chat-texts.jsonl`; el flujo `user-events`, que contiene nombres, se divide por día y se elimina después de 90 días. No existe una ruta de lectura para ese historial personal.
 
 El servidor migra una sola vez los comentarios existentes de `data/tiktok/comments-archive.json` al nuevo flujo de textos. Los documentos del overlay se guardan en `data/tiktok/overlay/state/`. El directorio `data/` debe estar en almacenamiento persistente en producción; el backend no tiene autenticación, así que limita el acceso a la aplicación con una red privada, VPN o proxy autenticado.
 
 El navegador que carga el overlay inicia la conexión con reintentos cada 5 segundos durante un máximo de 5 minutos; si se agotan, el botón rojo permite reiniciarlos manualmente. El panel `/backend` también permite iniciar la conexión al guardar la cuenta; cargar el panel o arrancar el servidor no conecta TikTok.
 El overlay reporta su visibilidad al servidor cada 20 segundos y al apagarse la página; si el estado cambia de activo a inactivo, se envía un único aviso de WhatsApp cuando las alertas están habilitadas. La expiración por falta de señal es de 90 segundos.
-El overlay inicia en español con el torneo clásico bloqueado, alternando los duelos Olimpia–Cerro y Barcelona–Real Madrid. El límite de taps inicia en 100 y sube 10 después de cada activación, sin depender de la audiencia. La voz en off narra el avance sin pedir regalos ni interacciones. Los avances totales de los turbos por regalo (6% por defecto durante 15 s) y por límite de taps (3% por defecto durante 7 s) se configuran desde Herramientas en `/backend` y persisten entre reinicios.
+El overlay inicia en español con el torneo clásico bloqueado, alternando los duelos Olimpia–Cerro y Barcelona–Real Madrid. El límite de taps inicia en 50 y sube 10 por cada 10% de avance, sin depender de la audiencia. La voz en off narra el avance sin pedir regalos ni interacciones; primero se reproducen las voces de regalos, luego los comentarios de usuarios y por último las demás narraciones. Los avances totales de los turbos por regalo (6% por defecto durante 15 s) y por límite de taps (3% por defecto durante 7 s) se configuran desde Herramientas en `/backend` y persisten entre reinicios.
 
 ## Estructura
 
@@ -118,7 +118,7 @@ modules/
     persistenceService.js         # Estado JSON y logs del overlay
     backend.html                  # Interfaz mínima de configuración
     public/                       # Manifest, service worker e iconos de la PWA tortu
-v21.html                              # Overlay principal conectado a eventos de TikTok
+overlay.html                          # Overlay principal conectado a eventos de TikTok
 test/
   server.test.js                  # HTTP, configuración y publicación
   overlay-persistence.test.js     # Persistencia, exportación y retención del overlay

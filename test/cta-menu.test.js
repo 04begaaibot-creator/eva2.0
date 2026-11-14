@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
-const html = fs.readFileSync(path.join(__dirname, '..', 'v21.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', 'overlay.html'), 'utf8');
 
 test('gift CTAs are icon-only and offer only rose, donut, and confetti', () => {
   const gifts = html.match(/const GIFTS=\[([\s\S]*?)\];/);

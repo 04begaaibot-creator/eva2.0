@@ -5,8 +5,9 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
-const html = fs.readFileSync(path.join(root, 'v21.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'overlay.html'), 'utf8');
 const connectionFunction = html.match(/function setConnection\(status\)\{[\s\S]*?\n\}/)?.[0];
+const voiceFilter = html.match(/const voiceHasBlockedWord=text=>\/demonio\/i\.test\(String\(text\)\);/)?.[0];
 
 test('classic tournament starts locked in Spanish without a tournament selector', () => {
   assert.match(html, /let tournamentMode='clasico'/);
@@ -14,15 +15,19 @@ test('classic tournament starts locked in Spanish without a tournament selector'
   assert.match(html, /TOURNAMENT_MODES\.splice\(0,TOURNAMENT_MODES\.length,'clasico'\)/);
 });
 
-test('classic mode alternates the Olimpia-Cerro and Barcelona-Real Madrid fixtures', () => {
+test('classic mode runs expanded best-of-three club fixtures', () => {
   assert.match(html, /TOURNAMENT_OPTIONS=TOURNAMENT_MODES\.slice\(\)/);
   assert.match(html, /TOURNAMENT_MODES=\['libre','clasico'/);
-  assert.match(html, /clasico:'CLÁSICO OLIMPIA VS CERRO \/ BARCELONA VS REAL MADRID'/);
-  assert.match(html, /CLASSIC_FIXTURES=\[\['ol','cp'\],\['ucl-bc','ucl-rm'\]\]/);
+  assert.match(html, /const CLASSICS_POOL=\{/);
+  assert.match(html, /const CLASSIC_DEFS=\[/);
+  assert.match(html, /\['ol','cp','SUPERCLÁSICO PARAGUAYO'\],\['ucl-bc','ucl-rm','EL CLÁSICO'\]/);
+  assert.match(html, /const CLASSIC_FIXTURES=CLASSIC_DEFS\.map\(d=>\[d\[0\],d\[1\]\]\)/);
+  assert.match(html, /const CLASSIC_WINS=2/);
   assert.match(html, /if\(mode==='clasico'\)return CLASSIC_FIXTURES\[classicFixtureIndex\]\.slice\(\)/);
   assert.match(html, /bracketFrom\(mode==='clasico'\?ids:ids\.slice\(\)\.sort/);
   assert.match(html, /if\(tournamentMode==='clasico'\)classicFixtureIndex=\(classicFixtureIndex\+1\)%CLASSIC_FIXTURES\.length/);
-  assert.match(html, /FINAL CLÁSICA/);
+  assert.match(html, /PARTIDO '\+Math\.min\(3,\(P\.wins\[0\]\|\|0\)\+\(P\.wins\[1\]\|\|0\)\+1\)\+' DE 3/);
+  assert.match(html, /P\.cl\[ck\]/);
   assert.match(html, /if\(k==='ol'\)return `<rect[^`]+fill="#fff"[^`]+fill="#111"/);
   assert.match(html, /cp:\['#0b3d91','#c8102e'\]/);
 });
@@ -77,7 +82,7 @@ test('empty free-tournament lanes do not show waiting-team labels', () => {
 });
 
 test('inactivity victories advance without awarding a cup', () => {
-  assert.match(html, /if\(fin&&!lowActivityFinished\)P\.cp\[id\]/);
+  assert.match(html, /if\(fin&&!lowActivityFinished\)\{P\.cp\[id\]/);
   assert.match(html, /Gana por inactividad · sin copa/);
 });
 
@@ -107,12 +112,13 @@ test('team tap counters omit the turbo badge and use the freed width for the cou
   assert.match(html, /\.hb em\{justify-content:flex-start;left:20px;right:2px/);
 });
 
-test('turbo tap limit starts at 100 and increases by 10 independently of audience', () => {
-  assert.match(html, /let HEART_N=100,heartLimitOffset=0/);
-  assert.match(html, /P\.nextTapLimit=P\.nextTapLimit\|\|function\(current\)/);
-  assert.match(html, /TAP_POLICY\.consumeTapCountWithNextLimit/);
-  assert.doesNotMatch(html, /audienceMultiplier|nextAudienceTapLimit/);
-  assert.doesNotMatch(html, /LEVEL_PROGRESS_START|LEVEL_MAX_TAPS/);
+test('turbo tap limit starts at 50 and rises with race progress, not audience', () => {
+  assert.match(html, /const HEART_START=50,HEART_STEP=10/);
+  assert.match(html, /const heartBase=\(\)=>\{let mx=0;try\{mx=Math\.max\(0,\.\.\.S\.map\(s=>\+s\.p\|\|0\)\)/);
+  assert.match(html, /const n=Math\.max\(10,Math\.min\(Number\.MAX_SAFE_INTEGER,heartBase\(\)\+heartLimitOffset\)\)/);
+  assert.match(html, /TAP_POLICY\.consumeTapCount\(heart\[t\],n,HEART_N\)/);
+  assert.match(html, /if\(!over\)syncHeartLimit\(\)/);
+  assert.doesNotMatch(html, /audienceMultiplier|nextAudienceTapLimit|LEVEL_PROGRESS_START|LEVEL_MAX_TAPS/);
 });
 
 test('each team shows its live-wide event total in compact K and M notation', () => {
@@ -181,6 +187,28 @@ test('voice announces each team at 15% race milestones without prompting chat', 
   assert.doesNotMatch(html, /Comenta en el chat el club que apoyas/);
 });
 
+test('voiceover blocks demonio wherever it appears in the spoken text', () => {
+  assert.ok(voiceFilter, 'voice filter should exist');
+  const isBlocked = vm.runInNewContext(`${voiceFilter}; voiceHasBlockedWord`);
+  for (const text of [
+    'Demonio al comienzo',
+    'Texto demonio en el medio',
+    'Texto al final: DEMONIO',
+  ]) {
+    assert.equal(isBlocked(text), true);
+  }
+  assert.match(html, /if\(voiceHasBlockedWord\(text\)\)return false/);
+  assert.match(html, /window\.TORTUWORLD_VOICE_FILTER\(txt\)/);
+});
+
+test('live gift goal bar celebrates every crossed real-gift milestone', () => {
+  assert.match(html, /const LAD=\[\[3,'✨ Lluvia de estrellas'/);
+  assert.match(html, /if\(e&&!e\.bot&&e\.type==='gift'\)/);
+  assert.match(html, /previous<milestone\[0\]&&gifts>=milestone\[0\]/);
+  assert.match(html, /milestone<=gifts;milestone\+=100/);
+  assert.match(html, /#giftTotal\.sin\{display:none!important\}/);
+});
+
 test('team changes are announced before chat and per-round announcement state is cleared', () => {
   assert.match(html, /function enqueueTeamMove\(display,team,prev\)/);
   assert.match(html, /if\(prev!==team\)\{moved=true;teamAnnounceAt\.set\(user,now\);try\{enqueueTeamMove/);
@@ -199,7 +227,7 @@ test('perfume gifts finish the race and honor appears above the trophy table', (
 
 test('race reset releases round-only caches and voice queues', () => {
   assert.match(html, /picks\.clear\(\);lastChat\.clear\(\);recentChatPicks\.clear\(\);clearRoundCaches\(\)/);
-  assert.match(html, /function voReset\(\)\{[^}]*chatReadAt\.clear\(\);giftQueue\.length=0;giftSpeaking=false;giftSpeechGeneration\+\+/);
+  assert.match(html, /function voReset\(\)\{[^}]*chatReadAt\.clear\(\);giftQueue\.length=0;voiceQueue\.length=0;activeVoiceRequest=null;giftSpeaking=false;giftSpeechGeneration\+\+/);
   assert.match(html, /registerRoundCleanup\(\(\)=>\{visto\.clear\(\);pts\.clear\(\);box\.replaceChildren\(\)\}\)/);
   assert.match(html, /registerRoundCleanup\(\(\)=>\{info\.clear\(\);last=null\}\)/);
   assert.match(html, /reset=function\(\)\{ultimo\.clear\(\);return _reset\.apply\(this,arguments\)\}/);
@@ -226,10 +254,17 @@ test('real tap, turbo, and gift calculations run through the browser activity po
   assert.match(html, /window\.recordLiveTap\(team,tapCount\)/);
   assert.match(html, /window\.recordLiveTap=\(team,count\)=>heartAdd\(team,count\)/);
   assert.doesNotMatch(html, /const taps=TAP_POLICY\.tapEventDelta\(type,n\)/);
-  assert.match(html, /TAP_POLICY\.consumeTapCountWithNextLimit/);
+  assert.match(html, /TAP_POLICY\.consumeTapCount\(heart\[t\],n,HEART_N\)/);
   assert.match(html, /TAP_POLICY\.giftProgress\(gifts,GIFT_PROGRESS\)/);
   assert.match(html, /TAP_POLICY\.giftTurboDuration\(count,GIFT_TURBO_MS\)/);
   assert.match(html, /LS\.set\(ST_KEY,rest\)/);
+});
+
+test('gift, chat, and other voiceovers are queued in priority order', () => {
+  assert.match(html, /const VOICE_PRIORITY=\{gift:0,chat:1,other:2\}/);
+  assert.match(html, /if\(priority===VOICE_PRIORITY\.gift\)preemptLowerPriorityVoice\(priority\)/);
+  assert.match(html, /if\(request\.priority>0&&giftQueue\.length\)return/);
+  assert.match(html, /if\(request\.priority>1&&chatQueue\.length\)return/);
 });
 
 test('featured gift member is displayed without the crown icon', () => {

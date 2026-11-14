@@ -2,7 +2,7 @@ const path = require('node:path');
 const express = require('express');
 
 function registerOverlayRoutes(app, { persistence, gameTools, overlayPath } = {}) {
-  const mainOverlayPath = overlayPath || path.join(__dirname, '..', '..', 'v21.html');
+  const mainOverlayPath = overlayPath || path.join(__dirname, '..', '..', 'overlay.html');
   app.get(['/', '/overlay', '/tortugas.html', '/tortugas_tiktok.html', '/v2.0.html'], (request, response) => {
     response.setHeader('Cache-Control', 'no-store, max-age=0');
     response.sendFile(mainOverlayPath);

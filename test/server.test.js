@@ -80,11 +80,13 @@ async function readEvent(reader, eventName) {
   }
 }
 
-test('serves v21 as the main Cluss TikTok overlay', async (t) => {
+test('serves overlay.html as the main Cluss TikTok overlay', async (t) => {
   const root = path.join(__dirname, '..');
   const dockerfile = fs.readFileSync(path.join(root, 'Dockerfile'), 'utf8');
-  assert.match(dockerfile, /COPY v21\.html \.\//);
-  assert.equal(fs.existsSync(path.join(root, 'v21.html')), true);
+  assert.match(dockerfile, /COPY overlay\.html \.\//);
+  assert.equal(fs.existsSync(path.join(root, 'overlay.html')), true);
+  assert.equal(fs.existsSync(path.join(root, 'v21.html')), false);
+  assert.equal(fs.existsSync(path.join(root, 'v28 (1).html')), false);
   assert.equal(fs.existsSync(path.join(root, 'v21 (1).html')), false);
   assert.equal(fs.existsSync(path.join(root, 'v10.html')), false);
   assert.equal(fs.existsSync(path.join(root, 'cluss.html')), false);
@@ -123,7 +125,7 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.equal(monitorService.state.isConnected, false, 'serving the overlay must not connect TikTok');
     assert.match(rootResponse.headers.get('cache-control'), /no-store/);
     const servedHtml = await rootResponse.text();
-    assert.equal(servedHtml, fs.readFileSync(path.join(root, 'v21.html'), 'utf8'));
+    assert.equal(servedHtml, fs.readFileSync(path.join(root, 'overlay.html'), 'utf8'));
     assert.match(servedHtml, /new EventSource\('\/api\/events'\)/);
     assert.match(servedHtml, /source\.addEventListener\('status'/);
     assert.match(servedHtml, /source\.addEventListener\('update'/);
@@ -411,7 +413,7 @@ test('sends WhatsApp alerts only when enabled and tracks overlay visibility', as
   }
 });
 
-test('forwards normalized TikTok updates in the shape consumed by v21', async () => {
+test('forwards normalized TikTok updates in the shape consumed by overlay.html', async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tortu-test-'));
   const monitorService = createMonitorService();
   const { server } = createWebserver({

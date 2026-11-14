@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const ROOT_FILES = ['package.json', 'package-lock.json', 'server.js', 'v21.html'];
+const ROOT_FILES = ['package.json', 'package-lock.json', 'server.js', 'overlay.html'];
 const compareText = (left, right) => (left < right ? -1 : left > right ? 1 : 0);
 
 function listFiles(directory) {
