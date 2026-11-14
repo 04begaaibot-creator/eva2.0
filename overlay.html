@@ -189,7 +189,7 @@ background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(0,0,0,.4)),r
 .sh{transform-origin:50px 490px}
 .walk .lg{animation:stepslow 1.7s ease-in-out infinite alternate} /* normal: patitas lentas, como tortuga */
 .walk .lg.rv{animation-direction:alternate-reverse}
-.tap-step .lg{animation:tapStep .22s ease-out}
+.tap-step .lg{animation:tapStep var(--tap-step-duration,.3s) ease-out}
 .tap-step .lg.rv{animation-delay:.06s}
 .walk .sh{animation:sway 2.6s ease-in-out infinite alternate}
 @keyframes step{from{transform:rotate(-20deg)}to{transform:rotate(20deg)}}
@@ -1189,7 +1189,8 @@ function update(){
 function float(i,txt){const el=document.createElement('b');el.className='fl';el.textContent=txt;el.style.top=((544-Math.min(100,S[i].p)*4.7)/588*100)+'%';$('#sv'+i).appendChild(el);setTimeout(()=>el.remove(),900)}
 /* Anima las patas de la tortuga i durante 1 s */
 function walk(i){const l=$('#ln'+i);l.classList.add('walk');clearTimeout(wt[i]);wt[i]=setTimeout(()=>l.classList.remove('walk'),1000)}
-function tapStep(i){const l=$('#ln'+i);if(!l)return;l.classList.remove('tap-step');void l.offsetWidth;l.classList.add('tap-step');clearTimeout(tapStepTimers[i]);tapStepTimers[i]=setTimeout(()=>l.classList.remove('tap-step'),260)}
+function tapStepDuration(count){const taps=Math.max(1,Math.floor(Number(count)||1));return Math.max(.07,.3/(1+Math.log2(taps)))}
+function tapStep(i,count){const l=$('#ln'+i);if(!l)return;clearTimeout(tapStepTimers[i]);l.classList.remove('tap-step');void l.offsetWidth;l.style.setProperty('--tap-step-duration',tapStepDuration(count)+'s');l.classList.add('tap-step');tapStepTimers[i]=setTimeout(()=>{l.classList.remove('tap-step');l.style.removeProperty('--tap-step-duration')},260)}
 /* Salto corto de la tortuga i al recibir un evento */
 function hop(i){const g=$('#in'+i);g.classList.remove('hop');void g.getBBox();g.classList.add('hop')}
 /* Avance directo para eventos automaticos y acciones del motor; los eventos reales usan solo el contador tap tap. */
@@ -1741,7 +1742,7 @@ function tapPop(h,n){
 /* Suma taps ponderados al contador; al completar el limite actual activa el turbo. */
 function heartAdd(t,n){
  if(over||!T[t])return;
- if(n>0)tapStep(t);
+ if(n>0)tapStep(t,n);
  const previousLimit=HEART_N;
  const {remaining,activations:full}=TAP_POLICY.consumeTapCount(heart[t],n,HEART_N); /* el limite ya no sube por turbo: sube con el % de pista (syncHeartLimit) */
  const nextLimit=HEART_N;

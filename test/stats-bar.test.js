@@ -8,6 +8,7 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'overlay.html'), 'utf8');
 const connectionFunction = html.match(/function setConnection\(status\)\{[\s\S]*?\n\}/)?.[0];
 const voiceFilter = html.match(/const voiceHasBlockedWord=text=>\/demonio\/i\.test\(String\(text\)\);/)?.[0];
+const tapStepDurationFunction = html.match(/function tapStepDuration\(count\)\{[^}]+\}/)?.[0];
 
 test('classic tournament starts locked in Spanish without a tournament selector', () => {
   assert.match(html, /let tournamentMode='clasico'/);
@@ -120,9 +121,15 @@ test('team tap counters omit the turbo badge and use the freed width for the cou
 });
 
 test('each positive LIVE tap update kicks the turtle legs', () => {
-  assert.match(html, /\.tap-step \.lg\{animation:tapStep \.22s ease-out\}/);
-  assert.match(html, /function tapStep\(i\)/);
-  assert.match(html, /if\(n>0\)tapStep\(t\)/);
+  assert.match(html, /\.tap-step \.lg\{animation:tapStep var\(--tap-step-duration,\.3s\) ease-out\}/);
+  assert.match(html, /function tapStep\(i,count\)/);
+  assert.match(html, /if\(n>0\)tapStep\(t,n\)/);
+  assert.ok(tapStepDurationFunction, 'tap speed should be calculated from the received tap count');
+  const tapStepDuration = vm.runInNewContext(`${tapStepDurationFunction}; tapStepDuration`);
+  assert.equal(tapStepDuration(1), 0.3);
+  assert.ok(tapStepDuration(5) < tapStepDuration(1));
+  assert.ok(tapStepDuration(10) < tapStepDuration(5));
+  assert.equal(tapStepDuration(100), 0.07);
 });
 
 test('overlay messages do not solicit viewer actions', () => {
