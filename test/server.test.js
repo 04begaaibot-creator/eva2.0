@@ -59,14 +59,25 @@ async function close(server) {
   await closed;
 }
 
+const eventBuffers = new WeakMap();
+
 async function readEvent(reader, eventName) {
-  let message = '';
-  while (!message.includes(`event: ${eventName}\n`)) {
+  let message = eventBuffers.get(reader) || '';
+  while (true) {
+    const boundary = message.indexOf('\n\n');
+    if (boundary >= 0) {
+      const frame = message.slice(0, boundary + 2);
+      message = message.slice(boundary + 2);
+      if (frame.startsWith(`event: ${eventName}\n`)) {
+        eventBuffers.set(reader, message);
+        return frame;
+      }
+      continue;
+    }
     const { value, done } = await reader.read();
     assert.equal(done, false, 'SSE stream closed before the expected event');
     message += new TextDecoder().decode(value);
   }
-  return message;
 }
 
 test('serves v21 as the main Cluss TikTok overlay', async (t) => {
@@ -101,6 +112,7 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.match(backendHtml, /id="whatsapp-enable"/);
     assert.match(backendHtml, /id="whatsapp-form"/);
     assert.match(backendHtml, /id="game-settings-form"/);
+    assert.match(backendHtml, /Object\.prototype\.hasOwnProperty\.call\(state, 'count'\)/);
     assert.match(backendHtml, /\/api\/game-tools\/reset/);
     assert.equal(monitorService.state.isConnected, false, 'opening the backend must not connect TikTok');
 
@@ -159,7 +171,7 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.equal((await fetch(`${baseUrl}/v45.html`)).status, 404);
     const serviceWorker = await fetch(`${baseUrl}/sw.js`);
     assert.equal(serviceWorker.status, 200);
-    assert.match(await serviceWorker.text(), /tortu-shell-v14/);
+    assert.match(await serviceWorker.text(), /tortu-shell-v15/);
     assert.equal((await fetch(`${baseUrl}/activity-policy.js`)).status, 200);
     assert.equal((await fetch(`${baseUrl}/api/activity-policy.js`)).status, 200);
     const manifest = await fetch(`${baseUrl}/manifest.webmanifest`);
@@ -215,6 +227,11 @@ test('shares server game tools and gift counts across clients until manually res
     const eventResponse = await fetch(`${baseUrl}/api/game-tools/events`);
     reader = eventResponse.body.getReader();
     await readEvent(reader, 'game-tools');
+    const firstAudience = await readEvent(reader, 'game-settings');
+    assert.match(firstAudience, /"count":12/);
+    monitorService.emitAudienceCount(7);
+    const updatedAudience = await readEvent(reader, 'game-settings');
+    assert.match(updatedAudience, /"count":7/);
 
     const commandResponse = await fetch(`${baseUrl}/api/game-tools/command`, {
       method: 'POST',

@@ -316,9 +316,8 @@ function createTikTokMonitorService({
     }
     listeners.set(WebcastEvent.ROOM_USER, (payload) => {
       if (state.connection !== connection || !payload || typeof payload !== 'object') return;
-      const count = Number(
-        payload.totalUser ?? payload.totalUserCount ?? payload.viewerCount ?? payload.userCount,
-      );
+      if (payload.viewerCount === null || payload.viewerCount === undefined) return;
+      const count = Number(payload.viewerCount);
       if (!Number.isSafeInteger(count) || count < 0) return;
       for (const listener of audienceCountListeners) listener(count);
     });

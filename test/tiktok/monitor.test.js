@@ -193,10 +193,12 @@ test('monitor normalizes every webcast event and event payload shape', async () 
   ];
 
   for (const [eventName, payload] of cases) connection.emit(eventName, payload);
-  connection.emit(WebcastEvent.ROOM_USER, { totalUser: 10 });
-  connection.emit(WebcastEvent.ROOM_USER, { totalUser: 'not-a-count' });
+  connection.emit(WebcastEvent.ROOM_USER, { viewerCount: 10, totalUser: 500 });
+  connection.emit(WebcastEvent.ROOM_USER, { viewerCount: 7, totalUser: 501 });
+  connection.emit(WebcastEvent.ROOM_USER, { totalUser: 502 });
+  connection.emit(WebcastEvent.ROOM_USER, { viewerCount: 'not-a-count', totalUser: 503 });
   assert.equal(received.length, cases.length);
-  assert.deepEqual(audienceCounts, [10]);
+  assert.deepEqual(audienceCounts, [10, 7]);
   assert.equal(received[0].username, 'ana');
   assert.equal(received[0].displayName, 'Anita');
   assert.equal(received[0].avatar, 'avatar');

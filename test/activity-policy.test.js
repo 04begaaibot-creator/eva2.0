@@ -37,6 +37,17 @@ test('tap counter retains remainder and activates turbo once per completed thres
 });
 
 test('audience-based tap thresholds use the new limit for each following activation', () => {
+  assert.equal(policy.audienceTapLimit(null, 10), 10);
+  assert.equal(policy.audienceTapLimit(0, 10), 10);
+  assert.equal(policy.audienceTapLimit(12, 10), 120);
+  assert.equal(policy.audienceTapLimit(12, 6), 72);
+  assert.equal(policy.audienceTapLimit(12, 6, 8), 80);
+  assert.equal(policy.audienceTapLimit(12, 6, -100), 10);
+  assert.equal(
+    policy.audienceTapLimit(Number.MAX_SAFE_INTEGER, 1000),
+    Number.MAX_SAFE_INTEGER,
+  );
+
   assert.deepEqual(policy.consumeTapCountWithNextLimit(0, 9, 10, 30), {
     remaining: 9,
     activations: 0,
@@ -52,6 +63,15 @@ test('audience-based tap thresholds use the new limit for each following activat
     activations: 4,
     nextLimit: 30,
   });
+
+  const firstThreshold = policy.consumeTapCountWithNextLimit(
+    9, 1, 10, policy.audienceTapLimit(12, 10),
+  );
+  assert.deepEqual(firstThreshold, { remaining: 0, activations: 1, nextLimit: 120 });
+  const audienceChanged = policy.consumeTapCountWithNextLimit(
+    119, 1, firstThreshold.nextLimit, policy.audienceTapLimit(8, 10),
+  );
+  assert.deepEqual(audienceChanged, { remaining: 0, activations: 1, nextLimit: 80 });
 });
 
 test('each real gift advances the race and extends turbo without affecting tap count', () => {

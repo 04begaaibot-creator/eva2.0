@@ -49,6 +49,17 @@
         nextLimit: followingThreshold,
       };
     },
+    audienceTapLimit(audienceCount, multiplier, offset = 0) {
+      const count = audienceCount === null ? null : Number(audienceCount);
+      const factor = Number(multiplier);
+      const adjustment = Number(offset);
+      const base = Number.isSafeInteger(count) && count >= 0
+        && Number.isSafeInteger(factor) && factor >= 1 && factor <= 1000
+        ? count * factor
+        : 10;
+      const total = base + (Number.isFinite(adjustment) ? Math.floor(adjustment) : 0);
+      return Math.max(10, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(total)));
+    },
     giftProgress(activityCount, progressPerGift) {
       return statEventDelta('gift', activityCount) * progressPerGift;
     },

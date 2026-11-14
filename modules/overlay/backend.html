@@ -385,7 +385,6 @@
       gameToolsState = state;
       serverGifts.textContent = state.giftCount.toLocaleString('es-PY');
       renderGameSettings({
-        count: null,
         audienceMultiplier: state.audienceMultiplier,
         giftTurboProgress: state.giftTurboProgress,
         tapTurboProgress: state.tapTurboProgress,
@@ -394,7 +393,7 @@
     }
 
     function renderGameSettings(state, forceSettings = false) {
-      if (state?.count !== null && state?.count !== undefined) {
+      if (Object.prototype.hasOwnProperty.call(state, 'count')) {
         serverAudience.textContent = Number.isSafeInteger(state.count)
           ? state.count.toLocaleString('es-PY')
           : '—';

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tortu-shell-v14';
+const CACHE_NAME = 'tortu-shell-v15';
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',

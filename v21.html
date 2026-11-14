@@ -594,6 +594,7 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
 <script>
 /* v11: si /activity-policy.js no carga o le faltan funciones, se rellenan aqui (antes tiraba error y el contador no funcionaba) */
 (function(){var P=window.TORTUWORLD_ACTIVITY_POLICY=window.TORTUWORLD_ACTIVITY_POLICY||{};
+ if(Object.isFrozen(P))P=window.TORTUWORLD_ACTIVITY_POLICY=Object.assign({},P);
  if(typeof P.resolveSupportSide!=='function'){
   P=window.TORTUWORLD_ACTIVITY_POLICY=Object.assign({},P,{resolveSupportSide:function(username,teamCount,assignedSide,configuredSide){
    if(!Number.isInteger(teamCount)||teamCount<1)return-1;
@@ -610,6 +611,7 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
  P.statEventDelta=P.statEventDelta||function(t,n){if(['member','chat','gift','like','follow','share'].indexOf(t)<0)return 0;var c=+n;return t==='gift'||t==='like'?(isFinite(c)&&c>0?Math.max(1,Math.floor(c)):1):1};
  P.consumeTapCount=P.consumeTapCount||function(c,a,l){l=Math.floor(+l);if(!isFinite(l)||l<1)return{remaining:0,activations:0};var total=Math.max(0,Math.floor(+c||0))+Math.max(0,Math.floor(+a||0));return{remaining:total%l,activations:Math.floor(total/l)}};
  P.consumeTapCountWithNextLimit=P.consumeTapCountWithNextLimit||function(c,a,l,n){l=Math.floor(+l);n=Math.floor(+n);if(!isFinite(l)||l<1||!isFinite(n)||n<1)return{remaining:0,activations:0,nextLimit:l};var total=Math.max(0,Math.floor(+c||0))+Math.max(0,Math.floor(+a||0));if(total<l)return{remaining:total,activations:0,nextLimit:l};var r=total-l;return{remaining:r%n,activations:1+Math.floor(r/n),nextLimit:n}};
+ P.audienceTapLimit=P.audienceTapLimit||function(count,multiplier,offset){var c=count===null?null:Number(count),m=Number(multiplier),o=Number(offset),base=Number.isSafeInteger(c)&&c>=0&&Number.isSafeInteger(m)&&m>=1&&m<=1000?c*m:10,total=base+(isFinite(o)?Math.floor(o):0);return Math.max(10,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(total)))};
  P.giftProgress=P.giftProgress||function(n,p){return P.statEventDelta('gift',n)*p};
  P.giftTurboDuration=P.giftTurboDuration||function(n,d){return P.statEventDelta('gift',n)*d};
  P.tapLimitStep=P.tapLimitStep||function(){return 0};
@@ -1660,8 +1662,7 @@ const HINCHAS_JSON=[ /* editar aqui. Formato: {username:'maria_ol', avatar:'http
 let HEART_N=10,heartLimitOffset=0,liveAudienceCount=null,audienceMultiplier=10;
 const heart=T.map(()=>0);
 function nextAudienceTapLimit(){
- const base=liveAudienceCount===null?10:Math.max(10,liveAudienceCount*audienceMultiplier);
- return Math.max(10,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(base+heartLimitOffset)));
+ return TAP_POLICY.audienceTapLimit(liveAudienceCount,audienceMultiplier,heartLimitOffset);
 }
 function setLiveAudienceSettings(count,multiplier,giftProgress,tapProgress){
  if(count===null||(Number.isSafeInteger(count)&&count>=0))liveAudienceCount=count;

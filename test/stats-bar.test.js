@@ -111,11 +111,15 @@ test('activity policy fallback repairs a cached frozen policy missing team assig
     .find((source) => source.includes('si /activity-policy.js no carga'));
   assert.ok(fallback, 'activity policy fallback script should exist');
   const window = {
-    TORTUWORLD_ACTIVITY_POLICY: Object.freeze({ statEventDelta: () => 1 }),
+    TORTUWORLD_ACTIVITY_POLICY: Object.freeze({
+      resolveSupportSide: () => 1,
+      statEventDelta: () => 1,
+    }),
   };
   vm.runInNewContext(fallback, { window });
   assert.equal(window.TORTUWORLD_ACTIVITY_POLICY.resolveSupportSide('a', 2), 1);
   assert.equal(window.TORTUWORLD_ACTIVITY_POLICY.statEventDelta('chat'), 1);
+  assert.equal(window.TORTUWORLD_ACTIVITY_POLICY.audienceTapLimit(12, 10), 120);
 });
 
 test('voiceover announces only the rose turbo prompt at each race start', () => {
