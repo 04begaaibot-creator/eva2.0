@@ -220,46 +220,17 @@
         <div class="card-heading">
           <div>
             <h2 id="tools-heading">Herramientas del juego</h2>
-            <span class="subtle">Controles compartidos con el overlay abierto.</span>
+            <span class="subtle">Estado del usuario, recarga y límite de taps.</span>
           </div>
-          <button id="tools-toggle" class="button secondary" type="button" aria-expanded="false" aria-controls="tools-panel">
-            Mostrar herramientas
-          </button>
         </div>
-        <div id="tools-panel" hidden>
-          <div class="tools-metrics">
-            <div class="tools-metric"><span>Cronómetro del servidor</span><strong id="server-timer">00:00:00</strong></div>
-            <div class="tools-metric"><span>Regalos recibidos</span><strong id="server-gifts">0</strong></div>
-            <div class="tools-metric"><span>Audiencia actual</span><strong id="server-audience">—</strong></div>
-          </div>
-          <form id="game-settings-form" class="whatsapp-form">
-            <label for="gift-turbo-progress">Avance total del turbo por regalo (%)
-              <input id="gift-turbo-progress" name="giftTurboProgress" type="number" min="0" max="100" step="0.1" value="6" required>
-            </label>
-            <label for="tap-turbo-progress">Avance total del turbo por límite de taps (%)
-              <input id="tap-turbo-progress" name="tapTurboProgress" type="number" min="0" max="100" step="0.1" value="3" required>
-            </label>
-            <button class="button" type="submit">Guardar ajustes</button>
-          </form>
-          <p id="game-settings-message" role="status" class="tool-note">Cada partida inicia en 100 taps; cada activación aumenta el siguiente límite en 10. La audiencia es solo informativa. También puedes ajustar el avance de los turbos.</p>
+        <div id="tools-panel">
           <div class="tool-actions">
-            <button class="button secondary" type="button" data-command="language">🌐 Cambiar idioma</button>
-            <button class="button secondary" type="button" data-command="narrator">🗣️ Narrador Don Tortu</button>
-            <button class="button secondary" type="button" data-command="chat-voice">🎙️ Lectura del chat</button>
-            <button class="button secondary" type="button" data-command="sound-effects">🔊 Efectos de sonido</button>
-            <button class="button secondary" type="button" data-command="statistics">📊 Estadísticas</button>
-            <button class="button secondary" type="button" data-command="reset-cups">↺ Reiniciar copas</button>
-            <button class="button secondary" type="button" data-command="turbo-down">➖ Bajar límite turbo</button>
-            <button class="button secondary" type="button" data-command="turbo-up">➕ Subir límite turbo</button>
-            <button class="button secondary" type="button" data-command="tournament">🏆 Cambiar torneo</button>
-            <button class="button secondary" type="button" data-command="cta">🎁 Herramientas CTA</button>
-            <button class="button secondary" type="button" data-command="flags">🚩 Banderas</button>
-            <button class="button secondary" type="button" data-command="rose-prompt">🌹 Aviso de rositas</button>
+            <button class="button secondary" type="button" data-command="turbo-down">➖ Bajar límite de taps</button>
+            <button class="button secondary" type="button" data-command="turbo-up">➕ Subir límite de taps</button>
             <button class="button secondary" type="button" data-command="refresh">🔄 Actualizar página del cliente</button>
-            <button id="reset-game-tools" class="button" type="button">Reiniciar cronómetro y regalos</button>
           </div>
           <p id="tools-message" role="status" class="tool-note"></p>
-          <p class="tool-note">Los comandos se envían por el servidor al overlay activo. El cronómetro y los regalos se comparten y solo se reinician con el botón.</p>
+          <p class="tool-note">Estado de conexión y usuario arriba. Los controles se envían al overlay activo.</p>
         </div>
       </section>
       <section class="card" aria-labelledby="whatsapp-heading">
@@ -342,16 +313,8 @@
     const statsMessage = document.querySelector('#stats-message');
     const commentRows = document.querySelector('#comment-rows');
     const cupRows = document.querySelector('#cup-rows');
-    const toolsToggle = document.querySelector('#tools-toggle');
     const toolsPanel = document.querySelector('#tools-panel');
     const toolsMessage = document.querySelector('#tools-message');
-    const serverTimer = document.querySelector('#server-timer');
-    const serverGifts = document.querySelector('#server-gifts');
-    const serverAudience = document.querySelector('#server-audience');
-    const gameSettingsForm = document.querySelector('#game-settings-form');
-    const giftTurboProgressInput = document.querySelector('#gift-turbo-progress');
-    const tapTurboProgressInput = document.querySelector('#tap-turbo-progress');
-    const gameSettingsMessage = document.querySelector('#game-settings-message');
     const whatsappForm = document.querySelector('#whatsapp-form');
     const whatsappApiUrl = document.querySelector('#whatsapp-api-url');
     const whatsappInstance = document.querySelector('#whatsapp-instance');
@@ -363,7 +326,6 @@
     const whatsappStatus = document.querySelector('#whatsapp-status');
     const overlayClientStatus = document.querySelector('#overlay-client-status');
     const whatsappMessage = document.querySelector('#whatsapp-message');
-    let gameToolsState = { timerStartedAt: Date.now(), giftCount: 0 };
     let whatsappConfig = { enabled: false, apiKeyConfigured: false };
     function showStatus(state) {
       status.textContent = `${state.status || 'desconectado'}${state.username ? ` (@${state.username})` : ''}`;
@@ -372,39 +334,6 @@
         'connecting',
         ['connecting', 'reconnecting'].includes(state.status),
       );
-    }
-
-    function renderGameTools(state, forceSettings = false) {
-      if (!Number.isSafeInteger(state?.timerStartedAt) || !Number.isSafeInteger(state?.giftCount)) return;
-      gameToolsState = state;
-      serverGifts.textContent = state.giftCount.toLocaleString('es-PY');
-      renderGameSettings({
-        giftTurboProgress: state.giftTurboProgress,
-        tapTurboProgress: state.tapTurboProgress,
-      }, forceSettings);
-      renderServerTimer();
-    }
-
-    function renderGameSettings(state, forceSettings = false) {
-      if (Object.prototype.hasOwnProperty.call(state, 'count')) {
-        serverAudience.textContent = Number.isSafeInteger(state.count)
-          ? state.count.toLocaleString('es-PY')
-          : '—';
-      }
-      if (forceSettings || !gameSettingsForm.contains(document.activeElement)) {
-        if (Number.isFinite(state?.giftTurboProgress)) {
-          giftTurboProgressInput.value = String(state.giftTurboProgress);
-        }
-        if (Number.isFinite(state?.tapTurboProgress)) {
-          tapTurboProgressInput.value = String(state.tapTurboProgress);
-        }
-      }
-    }
-
-    function renderServerTimer() {
-      const elapsed = Math.max(0, Math.floor((Date.now() - gameToolsState.timerStartedAt) / 1000));
-      const pad = (value) => String(value).padStart(2, '0');
-      serverTimer.textContent = `${pad(Math.floor(elapsed / 3600))}:${pad(Math.floor((elapsed % 3600) / 60))}:${pad(elapsed % 60)}`;
     }
 
     function renderWhatsAppConfig(config) {
@@ -493,32 +422,6 @@
       toolsMessage.textContent = 'Comando enviado al overlay.';
     }
 
-    async function resetGameTools() {
-      if (!window.confirm('¿Reiniciar el cronómetro y el contador de regalos compartidos?')) return;
-      const response = await fetch('/api/game-tools/reset', { method: 'POST' });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'No se pudieron reiniciar los contadores.');
-      renderGameTools(result);
-      toolsMessage.textContent = 'Cronómetro y contador de regalos reiniciados.';
-    }
-
-    async function saveGameSettings(event) {
-      event.preventDefault();
-      gameSettingsMessage.textContent = '';
-      const response = await fetch('/api/game-tools/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          giftTurboProgress: Number(giftTurboProgressInput.value),
-          tapTurboProgress: Number(tapTurboProgressInput.value),
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'No se pudieron guardar los ajustes.');
-      renderGameTools(result, true);
-      gameSettingsMessage.textContent = 'Ajustes guardados en el servidor.';
-    }
-
     async function loadConfiguration() {
       const [configurationResponse, statusResponse] = await Promise.all([
         fetch('/api/config'),
@@ -602,34 +505,11 @@
       }
     });
 
-    toolsToggle.addEventListener('click', () => {
-      const isOpening = toolsPanel.hidden;
-      toolsPanel.hidden = !isOpening;
-      toolsToggle.setAttribute('aria-expanded', String(isOpening));
-      toolsToggle.textContent = isOpening ? 'Ocultar herramientas' : 'Mostrar herramientas';
-      if (isOpening) {
-        toolsMessage.textContent = '';
-        fetch('/api/game-tools')
-          .then(async (response) => {
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.message || 'No se pudieron cargar las herramientas.');
-            renderGameTools(result);
-          })
-          .catch((error) => { toolsMessage.textContent = error.message; });
-      }
-    });
-
     toolsPanel.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-command]');
       if (button) {
         sendGameCommand(button.dataset.command).catch((error) => { toolsMessage.textContent = error.message; });
       }
-    });
-    document.querySelector('#reset-game-tools').addEventListener('click', () => {
-      resetGameTools().catch((error) => { toolsMessage.textContent = error.message; });
-    });
-    gameSettingsForm.addEventListener('submit', (event) => {
-      saveGameSettings(event).catch((error) => { gameSettingsMessage.textContent = error.message; });
     });
     whatsappForm.addEventListener('submit', (event) => {
       saveWhatsAppSettings(event).catch((error) => { whatsappMessage.textContent = error.message; });
@@ -643,8 +523,6 @@
       whatsappSettingsToggle.setAttribute('aria-expanded', String(isOpening));
       whatsappSettingsToggle.textContent = isOpening ? 'Ocultar configuración' : 'Configurar WhatsApp';
     });
-    setInterval(renderServerTimer, 1000);
-
     const source = new EventSource('/api/events');
     source.addEventListener('status', (event) => showStatus(JSON.parse(event.data)));
     source.addEventListener('comment-stats', (event) => renderCommentStats(JSON.parse(event.data)));
@@ -653,17 +531,8 @@
       renderRows(cupRows, stats.countries, 'cups');
     });
     const toolsSource = new EventSource('/api/game-tools/events');
-    toolsSource.addEventListener('game-tools', (event) => renderGameTools(JSON.parse(event.data)));
-    toolsSource.addEventListener('game-settings', (event) => renderGameSettings(JSON.parse(event.data)));
     toolsSource.addEventListener('overlay-status', (event) => renderOverlayStatus(JSON.parse(event.data)));
     toolsSource.addEventListener('whatsapp-status', (event) => renderWhatsAppConfig(JSON.parse(event.data)));
-    fetch('/api/game-tools')
-      .then(async (response) => {
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.message || 'No se pudieron cargar las herramientas.');
-        renderGameTools(result);
-      })
-      .catch((error) => { toolsMessage.textContent = error.message; });
     loadConfiguration().catch((error) => { message.textContent = error.message; });
     loadWhatsAppSettings().catch((error) => { whatsappMessage.textContent = error.message; });
   </script>

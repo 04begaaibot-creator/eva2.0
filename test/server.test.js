@@ -106,14 +106,14 @@ test('serves v21 as the main Cluss TikTok overlay', async (t) => {
     assert.equal(backendResponse.status, 200);
     const backendHtml = await backendResponse.text();
     assert.match(backendHtml, /fetch\('\/api\/reconnect', \{ method: 'POST' \}\)/);
-    assert.match(backendHtml, /id="tools-toggle"/);
-    assert.match(backendHtml, /data-command="reset-cups"/);
-    assert.match(backendHtml, /data-command="refresh"/);
+    const toolCommands = [...backendHtml.matchAll(/data-command="([^"]+)"/g)]
+      .map(([, command]) => command);
+    assert.deepEqual(toolCommands, ['turbo-down', 'turbo-up', 'refresh']);
+    assert.match(backendHtml, /id="status"/);
+    assert.match(backendHtml, /id="tools-panel"/);
+    assert.doesNotMatch(backendHtml, /id="tools-toggle"|game-settings-form|reset-game-tools/);
     assert.match(backendHtml, /id="whatsapp-enable"/);
     assert.match(backendHtml, /id="whatsapp-form"/);
-    assert.match(backendHtml, /id="game-settings-form"/);
-    assert.match(backendHtml, /Object\.prototype\.hasOwnProperty\.call\(state, 'count'\)/);
-    assert.match(backendHtml, /\/api\/game-tools\/reset/);
     assert.equal(monitorService.state.isConnected, false, 'opening the backend must not connect TikTok');
 
     const rootResponse = await fetch(baseUrl);
