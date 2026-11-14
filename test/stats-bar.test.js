@@ -45,8 +45,8 @@ test('overlay toolbar includes user status, reload, tap limit, and backend contr
   assert.doesNotMatch(toolbar, /class="version"|id="turboLim"|id="deploySignature"/);
   assert.match(html, /w\.id='cronoRegalos'/);
   assert.match(html, /tx\.id='cronoTxt'/);
-  assert.match(html, /#cronoRegalos #giftTotal\{[^}]*color:#ffe14d/);
-  assert.doesNotMatch(html, /#cronoRegalos #giftTotal:before|ic\.textContent='⏱'/);
+  assert.doesNotMatch(html, /giftTotal/);
+  assert.doesNotMatch(html, /ic\.textContent='⏱'/);
   assert.doesNotMatch(html, /id=['"](?:bTournament|bTorneoSel|bBanderas|bCta|rosaToggle)['"]/);
 });
 
@@ -100,14 +100,14 @@ test('race divider and versus badge stay beneath the winner popup', () => {
   assert.match(html, /la viga central y el cartel VS ya NO flotan encima/);
 });
 
-test('statistics bar exposes LIVE counters and the separate gift total', () => {
+test('statistics bar exposes LIVE counters without a gift total', () => {
   const start = html.indexOf('<div class="evs" id="evs"');
   const end = html.indexOf('<div id="toast"', start);
   const bar = start < 0 || end < 0 ? '' : html.slice(start, end);
   for (const type of ['member', 'chat', 'like', 'follow', 'share']) {
     assert.match(bar, new RegExp(`data-k="${type}"`), `${type} counter is missing`);
   }
-  assert.match(bar, /id="giftTotal"[^>]*>0<\/div>/);
+  assert.doesNotMatch(bar, /gift|Regalos|regalos/);
   assert.match(html, /idleStat\.dataset\.k='idle'/);
   assert.match(html, /limStat\.dataset\.k='lim'/);
   assert.match(html, /id="idleCountdown"/);
@@ -154,16 +154,14 @@ test('each completed tap limit advances 20 percent through turbo', () => {
   assert.match(html, /HEART_TURBO_PROGRESS\*full/);
 });
 
-test('team tickers include every known user and scroll overflowing rosters', () => {
-  const ticker = html.slice(html.indexOf('/* ---------- 2) TICKER DE USUARIOS REALES'), html.indexOf('</script>', html.indexOf('/* ---------- 2) TICKER DE USUARIOS REALES')));
-  const avatar = html.slice(html.indexOf('function avatar(e){'), html.indexOf('\n}', html.indexOf('function avatar(e){')));
-  assert.match(ticker, /\[\.\.\.known\.values\(\)\]\.filter\(user=>user\.t===t\)/);
-  assert.match(ticker, /track\.classList\.add\('scrolling'\)/);
-  assert.match(ticker, /window\.renderTeamRoster=paint/);
-  assert.match(avatar, /known\.set\(k,\{key:k,name:u,url:url\|\|\(known\.get\(k\)&&known\.get\(k\)\.url\)\|\|'',t\}\);\s*if\(typeof window\.renderTeamRoster==='function'\)window\.renderTeamRoster\(\)/);
-  assert.match(avatar, /if\(over\)return/);
-  assert.match(html, /@keyframes rankTicker\{to\{transform:translateX\(-50%\)\}\}/);
-  assert.doesNotMatch(ticker, /PER_TEAM|slice\(0,/);
+test('overlay removes the fan roster box and shows concurrent event alerts on each track', () => {
+  assert.doesNotMatch(html, /id=['"]rank['"]|TICKER DE USUARIOS REALES|rankTicker|renderTeamRoster/);
+  assert.match(html, /class="fan-alerts" id="ev'\+i\+'"/);
+  assert.match(html, /while\(layer\.children\.length>=8\)layer\.firstElementChild\.remove\(\)/);
+  assert.match(html, /alert\.style\.setProperty\('--x',\(12\+Math\.random\(\)\*76\)\+'%'\)/);
+  assert.match(html, /alert\.style\.setProperty\('--y',\(10\+Math\.random\(\)\*78\)\+'%'\)/);
+  assert.match(html, /const EI=\{chat:.*?member:/);
+  assert.doesNotMatch(html.match(/const EI=\{[^}]+\}/)[0], /gift:/);
 });
 
 test('each team shows its live-wide event total in compact K and M notation', () => {
@@ -185,13 +183,11 @@ test('team names appear below each header flag and refresh when the duel changes
   assert.match(html, /\.hd \.cn\{display:none!important\}/);
 });
 
-test('v30 gift layer reacts to gifts and supplies honor, turbo, and voice hooks', () => {
-  assert.match(html, /<style id="gami22">/);
-  assert.match(html, /function registerGift\(e\)/);
-  assert.match(html, /function voice\(g\)/);
-  assert.match(html, /window\.gami=\{level:LV,honor:HM,voice,/);
-  assert.match(html, /window\.__gamiTurbo=\{turbo:turbo,giftTurboUntil:giftTurboUntil\}/);
-  assert.match(html, /window\.gami&&window\.gami\.voice&&window\.gami\.voice\(g\)/);
+test('gift events do not show thank-you cards, voiceovers, or gift goals', () => {
+  assert.match(html, /if\(e\.type==='gift'\)return/);
+  assert.match(html, /e\.type!=='gift'&&e\.username&&FR\[e\.type\]/);
+  assert.match(html, /e\.type!=='gift'\)\{try\{levelCheck\(e\)\}/);
+  assert.doesNotMatch(html, /id="metaLive"|const LAD=\[\[3,'✨ Lluvia de estrellas'/);
 });
 
 test('activity policy fallback repairs a cached frozen policy missing team assignment', () => {
@@ -243,15 +239,6 @@ test('voiceover blocks demonio wherever it appears in the spoken text', () => {
     assert.equal(isBlocked(text), true);
   }
   assert.match(html, /if\(voiceHasBlockedWord\(text\)\)return false/);
-  assert.match(html, /window\.TORTUWORLD_VOICE_FILTER\(txt\)/);
-});
-
-test('live gift goal bar celebrates every crossed real-gift milestone', () => {
-  assert.match(html, /const LAD=\[\[3,'✨ Lluvia de estrellas'/);
-  assert.match(html, /if\(e&&!e\.bot&&e\.type==='gift'\)/);
-  assert.match(html, /previous<milestone\[0\]&&gifts>=milestone\[0\]/);
-  assert.match(html, /milestone<=gifts;milestone\+=100/);
-  assert.match(html, /#giftTotal\.sin\{display:none!important\}/);
 });
 
 test('team changes are announced before chat and per-round announcement state is cleared', () => {
@@ -265,16 +252,15 @@ test('overlay no longer exposes the rose prompt toggle', () => {
   assert.doesNotMatch(html, /rosaToggle|askRoseOn/);
 });
 
-test('perfume gifts finish the race and honor appears above the trophy table', () => {
-  assert.match(html, /money\\s\*gun\|pistola\\s\*\(de\\s\*\)\?\(dinero\|dinheiro\)\|pistolet\\s\*a\\s\*argent\|geldpistole\|spara\[\\s-\]\?soldi\|perfume\|parfum\|profumo/);
-  assert.match(html, /\.side>#honor\{order:-1\}[\s\S]*\.side>#copas\{order:1\}/);
+test('gift-specific capybara, perfume, and Money Gun wins are disabled', () => {
+  assert.doesNotMatch(html, /CAPI=|PERF=|isMoneyGunGift|CAPYBARA!|CAPIBARA!|PERFUME!/);
 });
 
 test('race reset releases round-only caches and voice queues', () => {
   assert.match(html, /picks\.clear\(\);lastChat\.clear\(\);recentChatPicks\.clear\(\);clearRoundCaches\(\)/);
   assert.match(html, /function voReset\(\)\{[^}]*chatReadAt\.clear\(\);giftQueue\.length=0;voiceQueue\.length=0;activeVoiceRequest=null;giftSpeaking=false;giftSpeechGeneration\+\+/);
   assert.match(html, /registerRoundCleanup\(\(\)=>\{visto\.clear\(\);pts\.clear\(\);box\.replaceChildren\(\)\}\)/);
-  assert.match(html, /registerRoundCleanup\(\(\)=>\{last=null;paint\(\)\}\)/);
+  assert.match(html, /eventTimers\.forEach\(clearTimeout\);eventTimers\.clear\(\);document\.querySelectorAll\('\.fan-alerts'\)\.forEach\(layer=>layer\.replaceChildren\(\)\)/);
   assert.match(html, /seen\.clear\(\);known\.clear\(\);userScore\.clear\(\)/);
   assert.match(html, /reset=function\(\)\{ultimo\.clear\(\);return _reset\.apply\(this,arguments\)\}/);
 });
@@ -306,11 +292,10 @@ test('real tap, turbo, and gift calculations run through the browser activity po
   assert.match(html, /LS\.set\(ST_KEY,rest\)/);
 });
 
-test('gift, chat, and other voiceovers are queued in priority order', () => {
-  assert.match(html, /const VOICE_PRIORITY=\{gift:0,chat:1,other:2\}/);
-  assert.match(html, /if\(priority===VOICE_PRIORITY\.gift\)preemptLowerPriorityVoice\(priority\)/);
-  assert.match(html, /if\(request\.priority>0&&giftQueue\.length\)return/);
-  assert.match(html, /if\(request\.priority>1&&chatQueue\.length\)return/);
+test('gift acknowledgements are not queued or spoken', () => {
+  assert.match(html, /if\(e\.type==='gift'\)return/);
+  assert.match(html, /if\(live\)\{\s*if\(type!=='gift'\)/);
+  assert.doesNotMatch(html, /type==='gift'\)say\(|if\(type==='gift'\)say\(/);
 });
 
 test('featured gift member is displayed without the crown icon', () => {
@@ -326,9 +311,6 @@ test('fan avatars and their live events use the same left or right side', () => 
   assert.doesNotMatch(html, /picks\.set\(key,team\);fanSides\.set\(key,team\)/);
 });
 
-test('large bottom-right gift count mirrors the real gift statistic without an icon', () => {
-  assert.match(html, /id="giftTotal"[^>]*>0<\/div>/);
-  assert.match(html, /#giftTotal\{[^}]*right:10px;bottom:5px[^}]*color:#ff3b30[^}]*font:900 38px/);
-  assert.match(html, /giftTotal\.textContent=stFmt\(ST\.gift\)/);
-  assert.match(html, /giftTotal\.setAttribute\('aria-label','Regalos recibidos: '\+ST\.gift\)/);
+test('the overlay has no gift total counter', () => {
+  assert.doesNotMatch(html, /giftTotal/);
 });
