@@ -156,8 +156,12 @@ test('each completed tap limit advances 20 percent through turbo', () => {
 
 test('team tickers include every known user and scroll overflowing rosters', () => {
   const ticker = html.slice(html.indexOf('/* ---------- 2) TICKER DE USUARIOS REALES'), html.indexOf('</script>', html.indexOf('/* ---------- 2) TICKER DE USUARIOS REALES')));
+  const avatar = html.slice(html.indexOf('function avatar(e){'), html.indexOf('\n}', html.indexOf('function avatar(e){')));
   assert.match(ticker, /\[\.\.\.known\.values\(\)\]\.filter\(user=>user\.t===t\)/);
   assert.match(ticker, /track\.classList\.add\('scrolling'\)/);
+  assert.match(ticker, /window\.renderTeamRoster=paint/);
+  assert.match(avatar, /known\.set\(k,\{key:k,name:u,url:url\|\|\(known\.get\(k\)&&known\.get\(k\)\.url\)\|\|'',t\}\);\s*if\(typeof window\.renderTeamRoster==='function'\)window\.renderTeamRoster\(\)/);
+  assert.match(avatar, /if\(over\)return/);
   assert.match(html, /@keyframes rankTicker\{to\{transform:translateX\(-50%\)\}\}/);
   assert.doesNotMatch(ticker, /PER_TEAM|slice\(0,/);
 });
@@ -270,7 +274,7 @@ test('race reset releases round-only caches and voice queues', () => {
   assert.match(html, /picks\.clear\(\);lastChat\.clear\(\);recentChatPicks\.clear\(\);clearRoundCaches\(\)/);
   assert.match(html, /function voReset\(\)\{[^}]*chatReadAt\.clear\(\);giftQueue\.length=0;voiceQueue\.length=0;activeVoiceRequest=null;giftSpeaking=false;giftSpeechGeneration\+\+/);
   assert.match(html, /registerRoundCleanup\(\(\)=>\{visto\.clear\(\);pts\.clear\(\);box\.replaceChildren\(\)\}\)/);
-  assert.match(html, /registerRoundCleanup\(\(\)=>\{last=null\}\)/);
+  assert.match(html, /registerRoundCleanup\(\(\)=>\{last=null;paint\(\)\}\)/);
   assert.match(html, /seen\.clear\(\);known\.clear\(\);userScore\.clear\(\)/);
   assert.match(html, /reset=function\(\)\{ultimo\.clear\(\);return _reset\.apply\(this,arguments\)\}/);
 });

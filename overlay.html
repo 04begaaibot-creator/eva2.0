@@ -1859,19 +1859,21 @@ function setAvatarImage(el,url){
 }
 /* Un evento REAL: su usuario pasa al frente del nido y el anterior baja a los huevos (el bot nunca llega aqui) */
 function avatar(e){
- if(over||!e||!['member','chat','gift','like','follow','share'].includes(e.type))return;
+ if(!e||e.bot||!['member','chat','gift','like','follow','share'].includes(e.type))return;
  const u=String(e.username||'').trim();if(!u)return;
  const k=u.toLowerCase(),t=supportTeamFor(k);
  const url=String(e.profilePictureUrl||e.profilePicture||e.avatarUrl||e.avatar||e.userImage||e.imageUrl||'');
+ if(t==null||!T[t]){if(!over&&e.type==='member')showEv('g','member',1,{name:u,url:url||''});return}
+ known.set(k,{key:k,name:u,url:url||(known.get(k)&&known.get(k).url)||'',t});
+ if(typeof window.renderTeamRoster==='function')window.renderTeamRoster();
+ if(over)return;
  const sc=(userScore.get(k)||0)+(SCORE[e.type]||0)*(e.type==='like'?Math.max(1,Math.floor(Number(e.activityCount))||1):1);userScore.set(k,sc); /* cada evento sube su puntaje */
- if(t==null||!T[t]){if(e.type==='member')showEv('g','member',1,{name:u,url:url||''});return} /* se une sin equipo: avatar grande al centro, sin tocar la carrera */
  if(sc>=20&&!greeted.has(k))greet(u,t,e.displayName||u); /* saludo de Don Tortu cuando el hincha cruza los 20 puntos */
  if(!seen.has(k)){seen.add(k);grow(t,.05)}
  let old=null,from=-1;
  recent.forEach((l,j)=>{const i=l.findIndex(x=>x.key===k);if(i>=0){old=l.splice(i,1)[0];from=j}}); /* si ya estaba, se saca y se vuelve a poner al frente */
  if(old&&from!==t){toast(who(u)+' se pasó a '+T[t].n,'🔁');A.sfx('sel')}
  recent[t].unshift({key:k,name:u,url:url||(old&&old.url)||'',vip:!!(old&&old.vip)});
- known.set(k,{key:k,name:u,url:url||(known.get(k)&&known.get(k).url)||'',t});
  trimNest(t);
  showEv(t,e.type,e.activityCount,{key:k,name:u,url:url||'',gift:e.type==='gift'?giftLabel(e):''}); /* alerta con avatar del usuario real */
  renderNest(t);if(from>=0&&from!==t)renderNest(from);
@@ -4178,11 +4180,12 @@ function paint(){try{
  });
  sizeUp();
 }catch(e){}}
-registerRoundCleanup(()=>{last=null});
+window.renderTeamRoster=paint;
+registerRoundCleanup(()=>{last=null;paint()});
 let lastH=0;
 function sizeUp(){const h=box.offsetHeight;if(!h||h===lastH)return;lastH=h;
  document.documentElement.style.setProperty('--pnl',(h+4)+'px');dispatchEvent(new Event('resize'))}
-paint();setInterval(paint,700);
+paint();
 addEventListener('load',()=>setTimeout(()=>{lastH=0;sizeUp()},700));
 })();
 </script>
