@@ -1,6 +1,7 @@
 <!doctype html>
 <!--
 CLUSS (antes Tortu Live): duelo unico OLIMPIA vs CERRO.
+ - REGLA PERMANENTE: ningun cuadro emergente, aviso, banner ni voz en off pide acciones a los espectadores (comentar, seguir, compartir, tocar/apoyar o enviar regalos); solo informa o reacciona a eventos reales.
  - Para participar hay que nombrar el club en el chat (olimpia/oli/decano · cerro/cp/ciclon/azulgrana). Sin club no se mueve la carrera.
  - Rotacion de clubes: el ganador sigue y enfrenta al siguiente rival disponible, en orden; no repite al rival inmediatamente anterior. Cada duelo es primero a 3 copas.
  - Botones de comentar, seguir y compartir eliminados (quedan APOYAR y ROSITA). El bot se detiene en el 80% (BOT_CAP).
@@ -100,9 +101,9 @@ Las reglas marcadas (propuesto) aun no estan confirmadas por el autor.
   - Estadisticas: panel 📊 con pestaña Usuarios (historial completo por usuario, enviado al servidor (flujo user-events); el panel solo muestra una ventana corta).
   - Contador tap tap: miembro 1, comentario 10, like 1 por me gusta, seguir 3 y compartir 5. El primer limite es 10 taps; audiencia y avance del turbo se configuran en el servidor.
   - Regalo real independiente del contador: +10% inmediato y turbo de 15 s con porcentaje total configurable en el servidor, por cada unidad.
-  - CTAs: destello inicial UNA vez por sesion (nada de pedidos en bucle, regla 1.a).
+  - Mensajes al publico: no pedir interacciones; avisos y voz solo informan o reaccionan a eventos reales.
  14. RETOQUES FINALES (v2.1) - capa independiente al final del archivo (confeti, efectos, banners, pips de copas, sonidos propios)
-  - Los pedidos de interaccion se escalonan en los hitos 25%, 50% y 75%; la explicacion de la rosita para activar turbo se dice una vez por sesion.
+  - Los hitos 25%, 50% y 75% muestran solo el estado de la carrera; nunca piden acciones ni regalos.
   - Los eventos del bot NO disparan chispas ni emojis de usuario; solo los eventos reales. Los banners (hitos, remontada, carrera pareja, foto finish) son del estado de la pista.
   - Los controles locales APOYAR y ROSITA estan deshabilitados; la rosa solo aparece al llegar un regalo REAL.
   - Respeta prefers-reduced-motion (menos particulas, sin anillos) y el boton 🔊. La musica de fondo sigue la regla 10 (OFF por partida).
@@ -154,10 +155,13 @@ background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(0,0,0,.4)),r
 .sh{transform-origin:50px 490px}
 .walk .lg{animation:stepslow 1.7s ease-in-out infinite alternate} /* normal: patitas lentas, como tortuga */
 .walk .lg.rv{animation-direction:alternate-reverse}
+.tap-step .lg{animation:tapStep .22s ease-out}
+.tap-step .lg.rv{animation-delay:.06s}
 .walk .sh{animation:sway 2.6s ease-in-out infinite alternate}
 @keyframes step{from{transform:rotate(-20deg)}to{transform:rotate(20deg)}}
 @keyframes stepslow{from{transform:rotate(-13deg)}to{transform:rotate(13deg)}}
 @keyframes stepfast{from{transform:rotate(-30deg)}to{transform:rotate(30deg)}}
+@keyframes tapStep{0%,100%{transform:rotate(0)}50%{transform:rotate(28deg)}}
 @keyframes sway{from{transform:rotate(-2.5deg)}to{transform:rotate(2.5deg)}}
 .hop{animation:hop .35s}
 @keyframes hop{40%{transform:translateY(-2px)}}
@@ -630,7 +634,7 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
 <div class="combo" id="combo" aria-live="polite"><span id="cmt"></span><i id="cmb"></i></div>
 <!-- Controles locales deshabilitados: el puntaje solo proviene de eventos reales de TikTok. -->
 <nav class="rail" aria-label="Acciones">
-<button class="cta rosita-cta" data-local-only disabled aria-label="ROSITA deshabilitada; envía una rosita real en TikTok para activar el modo turbo, este botón local no da puntos" title="Envía una rosita real en TikTok para activar el modo turbo"><span class="em" aria-hidden="true">🌹</span><span>ROSITA REAL</span><span class="hint">MODO TURBO</span></button>
+<button class="cta rosita-cta" data-local-only disabled aria-label="Información: una rosita real activa el modo turbo; botón deshabilitado" title="Efecto de la rosita real: modo turbo"><span class="em" aria-hidden="true">🌹</span><span>ROSITA REAL</span><span class="hint">MODO TURBO</span></button>
 </nav>
 <div class="bub" id="bub" aria-live="polite">¡Y ARRANCAN LAS TORTUGAS!</div>
 <svg width="64" height="64" viewBox="0 0 84 84" role="img" aria-label="Avatar de Don Tortu, el relator (tortuga)">
@@ -923,7 +927,7 @@ function clearRoundCaches(){
  });
 }
 let streak=0,cmbT=null;
-const wt=[];
+const wt=[],tapStepTimers=[];
 /* ===== CONFIG DE DIFICULTAD Y RITMO (editar solo aqui) ===== */
 const RACE_SECONDS=1800*PISTA;  /* segundos que tardaria una tortuga en llegar SOLA por avance pasivo (antes 240; x PISTA) */
 const PASSIVE_CAP=100;    /* el avance pasivo se detiene en este % de pista: el resto exige interaccion */
@@ -1054,7 +1058,7 @@ document.addEventListener('click',e=>{ /* eventos del panel (delegados) */
  if(b.dataset.tab)stTab(b.dataset.tab);
  else if('close' in b.dataset)stClose();
  else if('reset' in b.dataset){ /* doble toque para evitar reinicios por error */
-  if(!b.dataset.sure){b.dataset.sure=1;b.textContent='¿Seguro? Toca de nuevo';setTimeout(()=>{delete b.dataset.sure;b.textContent='↺ Reiniciar copas'},4000)}
+  if(!b.dataset.sure){b.dataset.sure=1;b.textContent='Confirmación pendiente';setTimeout(()=>{delete b.dataset.sure;b.textContent='↺ Reiniciar copas'},4000)}
   else{delete b.dataset.sure;b.textContent='↺ Reiniciar copas';window.tortugas.resetCopas();stClose()}
  }
  else if(b.dataset.dl)stDownload(b.dataset.dl);
@@ -1151,6 +1155,7 @@ function update(){
 function float(i,txt){const el=document.createElement('b');el.className='fl';el.textContent=txt;el.style.top=((544-Math.min(100,S[i].p)*4.7)/588*100)+'%';$('#sv'+i).appendChild(el);setTimeout(()=>el.remove(),900)}
 /* Anima las patas de la tortuga i durante 1 s */
 function walk(i){const l=$('#ln'+i);l.classList.add('walk');clearTimeout(wt[i]);wt[i]=setTimeout(()=>l.classList.remove('walk'),1000)}
+function tapStep(i){const l=$('#ln'+i);if(!l)return;l.classList.remove('tap-step');void l.offsetWidth;l.classList.add('tap-step');clearTimeout(tapStepTimers[i]);tapStepTimers[i]=setTimeout(()=>l.classList.remove('tap-step'),260)}
 /* Salto corto de la tortuga i al recibir un evento */
 function hop(i){const g=$('#in'+i);g.classList.remove('hop');void g.getBBox();g.classList.add('hop')}
 /* Avance directo para eventos automaticos y acciones del motor; los eventos reales usan solo el contador tap tap. */
@@ -1702,6 +1707,7 @@ function tapPop(h,n){
 /* Suma taps ponderados al contador; al completar el limite actual activa el turbo. */
 function heartAdd(t,n){
  if(over||!T[t])return;
+ if(n>0)tapStep(t);
  const previousLimit=HEART_N;
  const {remaining,activations:full}=TAP_POLICY.consumeTapCount(heart[t],n,HEART_N); /* el limite ya no sube por turbo: sube con el % de pista (syncHeartLimit) */
  const nextLimit=HEART_N;
@@ -2905,10 +2911,10 @@ addEventListener('pointerdown',()=>{try{A.unlock()}catch(e){}},{once:true,captur
 const rail=document.querySelector('.rail');if(!rail)return;
 const ap=rail.querySelector('.apoyar-cta'),ro=rail.querySelector('.rosita-cta');
 const fill=(b,em,res,al)=>{b.innerHTML='<span class="em" aria-hidden="true">'+em+'</span><span class="ar" aria-hidden="true">➜</span><span class="rs" aria-hidden="true">'+res+'</span>';b.setAttribute('aria-label',al);b.title=al};
-if(ap)fill(ap,'❤️','⚡1','APOYAR: cada toque en el live suma 1 tap');
-fill(ro,'🌹','🚀','ROSITA: activa el modo turbo');
+if(ap)fill(ap,'❤️','⚡1','Me gusta recibido: suma 1 tap');
+fill(ro,'🌹','🚀','Efecto de la rosita real: modo turbo');
 const pi=ro.cloneNode(false);pi.className='cta pistola-cta';pi.disabled=true;
-fill(pi,'💵🔫','🏆','PISTOLA DE DINERO: gana la carrera');
+fill(pi,'💵🔫','🏆','Efecto de la pistola de dinero: victoria inmediata');
 rail.appendChild(pi);
 {const em=pi.querySelector('.em'),m=getComputedStyle(document.documentElement).getPropertyValue('--pistola-img').match(/url\(["']?(.*?)["']?\)/);
 em.textContent='💵🔫'; /* respaldo: si la imagen de --pistola-img no carga, queda el emoji */
@@ -3001,48 +3007,6 @@ handleLiveEntry=function(e){
   if(t==='gift'){const gn=String(e.giftName||e.gift_name||e.gift||'');hit(/money\s*gun|pistola/i.test(gn)?pi:ro)}
   else if(t==='like'||t==='chat'||t==='follow'||t==='share')hit(ap)}}catch(x){}
  return r};
-})();
-</script>
-<!-- ===== CTA v3: los 3 botones (ROSITA, APOYAR/me gusta, PISTOLA) llaman la atencion POR TURNOS: reposo = brillo suave de su color; en su turno = pulso grande, aro, destello, etiqueta "¡AHORA!" y frase de accion. Un evento real sigue haciendo "hit" encima ===== -->
-<style id="cta-turnos">
-/* reposo: los tres se ven vivos pero tranquilos (el unico que se mueve es el que tiene el turno) */
-.rail .rosita-cta:not(.spot):not(.hit),.rail .rosita-cta:not(.spot):not(.hit):after,.rail .rosita-cta:not(.spot):not(.hit) .em{animation:none}
-.rail .rosita-cta:not(.spot):after{opacity:0}
-.rail .rosita-cta:not(.spot):not(.hit){box-shadow:0 3px 0 #5c0816,0 0 12px 2px rgba(255,60,110,.85)}
-.rail .apoyar-cta:not(.spot):not(.hit){box-shadow:0 3px 0 #052a63,0 0 12px 2px rgba(70,150,255,.85)}
-.rail .pistola-cta:not(.spot):not(.hit){box-shadow:0 3px 0 #053d1c,0 0 12px 2px rgba(60,220,120,.8)}
-/* en turno */
-.rail .cta.spot:not(.hit){z-index:5;border-color:#ffe14d;animation:spotPop .6s ease-in-out infinite,spotGlow .6s ease-in-out infinite}
-.rail .cta.spot .em{display:inline-block;animation:rositaWob .45s ease-in-out infinite alternate}
-.rail .cta.spot:after{content:"";position:absolute;inset:-3px;border-radius:15px;border:3px solid #ffe14d;opacity:0;pointer-events:none;animation:rositaRing 1s ease-out infinite}
-.rail .cta.spot:before{content:"¡AHORA!";position:absolute;top:-10px;left:8px;z-index:6;padding:2px 6px;border-radius:8px;border:2px solid #000;background:#ffe14d;color:#1a1000;font:900 9px/1 Inter,sans-serif;letter-spacing:.5px;text-shadow:none;animation:spotTag .6s ease-in-out infinite alternate}
-.rail .cta.spot .cx i{color:#ffe14d;font-weight:900}
-@keyframes spotPop{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-@keyframes spotGlow{0%,100%{box-shadow:0 3px 0 rgba(0,0,0,.55),0 0 10px 2px #ffe14d}50%{box-shadow:0 3px 0 rgba(0,0,0,.55),0 0 24px 8px #fff}}
-@keyframes spotTag{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-3px) rotate(4deg)}}
-@media (prefers-reduced-motion:reduce){.rail .cta.spot,.rail .cta.spot .em,.rail .cta.spot:after,.rail .cta.spot:before{animation:none}.rail .cta.spot{transform:scale(1.05)}}
-</style>
-<script>
-(function(){const rail=document.querySelector('.rail');if(!rail)return;
-const ro=rail.querySelector('.rosita-cta'),ap=rail.querySelector('.apoyar-cta'),pi=rail.querySelector('.pistola-cta');
-/* orden de los turnos y frase de accion de cada boton mientras tiene el turno */
-/* APOYAR rota su identidad en cada turno: APOYAR (me gusta) -> COMPARTIR -> SEGUIR (taps del contador: 1 / 5 / 3) */
-const ID=[['❤️','APOYAR','cada toque suma +1','¡toca el live! ❤️','APOYAR: cada toque en el live suma 1 tap'],['↗️','COMPARTIR','comparte y suma +5','¡comparte el live! ↗️','COMPARTIR: compartir el live suma 5 taps'],['➕','SEGUIR','sigue y suma +3','¡sigue la cuenta! ➕','SEGUIR: seguir la cuenta suma 3 taps']];let idn=-1,idCur=0;
-function nuevaId(){if(!ap)return;idCur=++idn%ID.length;const d=ID[idCur],em=ap.querySelector('.em'),bb=ap.querySelector('.cx b'),ii=ap.querySelector('.cx i');if(em)em.textContent=d[0];if(bb)bb.textContent=d[1];if(ii)ii.textContent=d[2];ap.setAttribute('aria-label',d[4]);ap.title=d[4]}
-const turnos=[[ro,()=>'avanza 10% + TURBO 🚀'],[ap,()=>ID[idCur][3]],[pi,()=>'gana al instante 🏆']].filter(x=>x[0]);
-if(!turnos.length)return;
-const SPOT_MS=2600,PERIOD_MS=3000;let k=0,prev=null;
-function frase(b,t){const i=b&&b.querySelector('.cx i');if(!i)return;if(t!==undefined){if(i.dataset.o===undefined)i.dataset.o=i.textContent;i.textContent=t}else if(i.dataset.o!==undefined){i.textContent=i.dataset.o;delete i.dataset.o}}
-function quita(b){if(!b)return;b.classList.remove('spot');frase(b)}
-function turno(){
- let fin=false;try{fin=!!over}catch(e){}
- if(prev){quita(prev);prev=null}
- if(fin||document.hidden)return;
- const [b,f]=turnos[k++%turnos.length];
- if(b===ap)nuevaId();   /* APOYAR cambia a COMPARTIR / SEGUIR antes de su turno */
- b.classList.add('spot');frase(b,f());prev=b;
- setTimeout(()=>{if(prev===b){quita(b);prev=null}},SPOT_MS)}
-/* foco rotativo en bucle desactivado (regla 1.a). Para reactivarlo: setTimeout(()=>{turno();setInterval(turno,PERIOD_MS)},1500); */
 })();
 </script>
 <!-- ===== PARCHE v1: escudos/banderas reales (local -> enlaces CSS -> Wikipedia), UX y efectos de gamificacion ===== -->

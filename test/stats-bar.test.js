@@ -119,6 +119,19 @@ test('team tap counters omit the turbo badge and use the freed width for the cou
   assert.match(html, /\.hb em\{justify-content:flex-start;left:20px;right:2px/);
 });
 
+test('each positive LIVE tap update kicks the turtle legs', () => {
+  assert.match(html, /\.tap-step \.lg\{animation:tapStep \.22s ease-out\}/);
+  assert.match(html, /function tapStep\(i\)/);
+  assert.match(html, /if\(n>0\)tapStep\(t\)/);
+});
+
+test('overlay messages do not solicit viewer actions', () => {
+  assert.match(html, /REGLA PERMANENTE: ningun cuadro emergente, aviso, banner ni voz en off pide acciones a los espectadores/);
+  assert.doesNotMatch(html, /cta-turnos|CTA v3: los 3 botones/);
+  assert.doesNotMatch(html, /b\.textContent='¿Seguro\? Toca de nuevo'/);
+  assert.match(html, /b\.textContent='Confirmación pendiente'/);
+});
+
 test('turbo tap limit starts at 50 and rises with race progress, not audience', () => {
   assert.match(html, /const HEART_START=50,HEART_STEP=10/);
   assert.match(html, /const heartBase=\(\)=>\{let mx=0;try\{mx=Math\.max\(0,\.\.\.S\.map\(s=>\+s\.p\|\|0\)\)/);
