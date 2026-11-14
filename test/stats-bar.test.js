@@ -7,12 +7,10 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'v21.html'), 'utf8');
 
-test('classic tournament starts locked in Spanish and can be manually unlocked', () => {
+test('classic tournament starts locked in Spanish without a tournament selector', () => {
   assert.match(html, /let tournamentMode='clasico'/);
-  assert.match(html, /let lock='clasico'/);
   assert.match(html, /pref\.clasico='es'/);
-  assert.match(html, /SRV\.set\('cluss\.torneoLock',lock\|\|'auto'\)/);
-  assert.match(html, /const seq=\[\.\.\.M,null\];lock=seq\[\(seq\.indexOf\(lock\)\+1\)%seq\.length\]/);
+  assert.match(html, /TOURNAMENT_MODES\.splice\(0,TOURNAMENT_MODES\.length,'clasico'\)/);
 });
 
 test('classic mode alternates the Olimpia-Cerro and Barcelona-Real Madrid fixtures', () => {
@@ -24,14 +22,18 @@ test('classic mode alternates the Olimpia-Cerro and Barcelona-Real Madrid fixtur
   assert.match(html, /bracketFrom\(mode==='clasico'\?ids:ids\.slice\(\)\.sort/);
   assert.match(html, /if\(tournamentMode==='clasico'\)classicFixtureIndex=\(classicFixtureIndex\+1\)%CLASSIC_FIXTURES\.length/);
   assert.match(html, /FINAL CLÁSICA/);
-  assert.match(html, /SHORT=\{libre:'LIBRE',clasico:'CLÁSICO'/);
   assert.match(html, /if\(k==='ol'\)return `<rect[^`]+fill="#fff"[^`]+fill="#111"/);
   assert.match(html, /cp:\['#0b3d91','#c8102e'\]/);
 });
 
-test('trophy button changes the persistent tournament selector even when rotation is locked', () => {
-  assert.match(html, /tournamentButton\.onclick=\(\)=>\{\s*const selector=document\.getElementById\('bTorneoSel'\);\s*if\(selector\)\{selector\.click\(\);return\}/);
-  assert.match(html, /TOURNAMENT_OPTIONS\.includes\(mode\)/);
+test('overlay toolbar keeps only user status, reload, and tap limit controls', () => {
+  const toolbar = html.match(/<div class="foot">([\s\S]*?)<\/div>/)?.[1] || '';
+  assert.ok(toolbar, 'toolbar should exist');
+  assert.match(toolbar, /id="connection"/);
+  const buttonIds = [...toolbar.matchAll(/<button\b[^>]*id="([^"]+)"/g)]
+    .map(([, id]) => id);
+  assert.deepEqual(buttonIds, ['bTurboDn', 'bTurboUp', 'bRefresh']);
+  assert.doesNotMatch(html, /id=['"](?:bTournament|bTorneoSel|bBanderas|bCta|rosaToggle)['"]/);
 });
 
 test('empty free-tournament lanes do not show waiting-team labels', () => {
@@ -153,10 +155,8 @@ test('team changes are announced before chat and per-round announcement state is
   assert.match(html, /function voReset\(\)\{chatSide\.clear\(\);teamAnnounceAt\.clear\(\)/);
 });
 
-test('rose setting remains persisted without controlling voice prompts', () => {
-  assert.match(html, /SRV\.get\('cluss\.askRose','1'\)/);
-  assert.match(html, /SRV\.set\('cluss\.askRose',roseOn\?'1':'0'\)/);
-  assert.match(html, /w\.append\(rb,c,g\)/);
+test('overlay no longer exposes the rose prompt toggle', () => {
+  assert.doesNotMatch(html, /rosaToggle|askRoseOn/);
 });
 
 test('perfume gifts finish the race and honor appears above the trophy table', () => {

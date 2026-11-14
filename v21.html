@@ -426,7 +426,7 @@ background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(0,0,0,.4)),r
 @media (prefers-reduced-motion:reduce){.ev.land{animation:none;opacity:0}}
 #evg{bottom:auto;top:46%}
 .ua.top{box-shadow:0 0 0 2px #ffd566,0 0 7px 1px #ffd566}
-.foot #bVozB{width:auto;padding:0 5px;font-size:11px}.foot .live{flex:0 1 auto}
+.foot .live{flex:0 1 auto}
 #stp header span{display:flex;gap:6px}
 /* TURBO: rojo, grande y parpadeando cuando el contador llega al limite */
 @keyframes tbk{0%,100%{transform:scale(1);opacity:1;box-shadow:0 0 6px 1px #ff2d2d}50%{transform:scale(1.18);opacity:.5;box-shadow:0 0 16px 5px #ff2d2d}}
@@ -657,8 +657,8 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
 </div>
 <div class="win" id="win" role="alertdialog" aria-label="Ganador"></div>
 </section>
-<!-- BARRA DE HERRAMIENTAS siempre visible: idioma, narradores, efectos, estadisticas, reinicio, turbo, refrescar, CTA y torneo -->
-<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">cluss</span><button class="sm" id="bLang" type="button" aria-label="Idioma / Language" title="Idioma / Language">EN</button><button class="sm on" id="bVoz" aria-pressed="true" aria-label="Narrador Don Tortu (V)" title="Narrador Don Tortu (V)">🗣️</button><button class="sm on" id="bVozB" aria-pressed="true" aria-label="Narrador B: lee comentarios del chat" title="Narrador B: lee comentarios del chat">🎙️B</button><button class="sm on" id="bSfx" aria-pressed="true" aria-label="Efectos de sonido (S)">🔊</button><button class="sm" id="bStat" aria-label="Estadísticas de torneos" title="Estadísticas de torneos">📊</button><button class="sm" id="bReset" aria-label="Reiniciar copas (tocar dos veces)" title="Reiniciar copas (tocar dos veces)">↺</button><button class="sm" id="bTurboDn" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" aria-label="Refrescar página" title="Refrescar página">🔄</button><span class="version" aria-label="Límite de taps del turbo y versión 1.2.2"><span id="turboLim">⚡ Límite 100 taps</span> · v1.2.2</span></div>
+<!-- Herramientas visibles: estado de conexión, ajuste del límite de taps y recarga. -->
+<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">cluss</span><button class="sm" id="bTurboDn" type="button" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" type="button" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" type="button" aria-label="Refrescar página" title="Refrescar página">🔄</button><span class="version" aria-label="Límite de taps del turbo y versión 1.2.2"><span id="turboLim">⚡ Límite 100 taps</span> · v1.2.2</span></div>
 <!-- FRANJA DE ESTADISTICAS del live: solo eventos REALES (los bots y los toques manuales no cuentan). El contador de regalos es solo informativo -->
 <div class="evs" id="evs" role="status" aria-label="Estadisticas del live"><div class="st" data-k="member" title="Unidos"><b>👥</b><span>0</span></div><div class="st" data-k="chat" title="Comentarios"><b>💬</b><span>0</span></div><div class="st" data-k="like" title="Me gusta"><b>❤️</b><span>0</span></div><div class="st" data-k="follow" title="Seguidores nuevos"><b>➕</b><span>0</span></div><div class="st" data-k="share" title="Compartidos"><b>↗️</b><span>0</span></div></div>
 <div id="giftTotal" role="status" aria-label="Regalos recibidos: 0">0</div>
@@ -1487,29 +1487,17 @@ window.persistTournamentRound=()=>{
  clearTimeout(tournamentSaveTimer);tournamentSaveTimer=0;save();
 };
 P.duel=DUELO.slice();P.nextRival=nextRival;P.br=BR;save();
-const tournamentButton=document.createElement('button');
-tournamentButton.className='sm';tournamentButton.id='bTournament';tournamentButton.type='button';
-document.querySelector('.version').before(tournamentButton);
-document.querySelector('.version').setAttribute('aria-label','Límite de taps del turbo y versión 1.2.2');
-document.querySelector('.version').lastChild.textContent=' · v1.2.2';
-function refreshTournamentButton(){tournamentButton.textContent='🏆';tournamentButton.title='Torneo actual: '+TOURNAMENT_LABELS[tournamentMode]+' · cambiar';tournamentButton.setAttribute('aria-label','Cambiar torneo; actual: '+TOURNAMENT_LABELS[tournamentMode])}
 function startTournament(mode){
  if(!TOURNAMENT_OPTIONS.includes(mode))throw new Error('Tipo de torneo desconocido: '+mode);
  tournamentMode=mode;if(mode==='clasico')classicFixtureIndex=0;if(mode==='countries')countryEntrants=[];
  BR=brNew(mode);const c=brCur();
  P.tournamentMode=mode;P.countryEntrants=countryEntrants;P.countryPopularity=countryPopularity;
  P.tournamentInteractions=tournamentInteractions;P.br=BR;P.duel=c.duel.slice();P.wins=[0,0];save();
- clearTimeout(rs);aplicarDuelo(c.duel);reset();renderTop3();refreshTournamentButton();
+ clearTimeout(rs);aplicarDuelo(c.duel);reset();renderTop3();
  toast('Torneo: '+TOURNAMENT_LABELS[mode],'🏆');
  hype('🏆',TOURNAMENT_LABELS[mode],' · '+T[0].n+' vs '+T[1].n,'#ffd566');
 }
-refreshTournamentButton();
-tournamentButton.onclick=()=>{
- const selector=document.getElementById('bTorneoSel');
- if(selector){selector.click();return}
- startTournament(TOURNAMENT_OPTIONS[(TOURNAMENT_OPTIONS.indexOf(tournamentMode)+1)%TOURNAMENT_OPTIONS.length]);
-};
-window.clussTorneo={start:startTournament,toast:(m,ic)=>toast(m,ic),modo:()=>tournamentMode}; /* lo usa el boton TORNEO (🔄/🔒) de herramientas */
+window.clussTorneo={start:startTournament,toast:(m,ic)=>toast(m,ic),modo:()=>tournamentMode};
 
 /* ===== AUDIO (WebAudio sintetizado, sin archivos externos) ===== */
 const A=(()=>{
@@ -1533,11 +1521,7 @@ const A=(()=>{
   ui();
  }
  /* Audio: actualiza el aspecto de los botones de sonido. */
- function ui(){
-  const b2=$('#bSfx');
-  b2.classList.toggle('on',!!P.sfx);b2.classList.toggle('off',!P.sfx);b2.setAttribute('aria-pressed',!!P.sfx);
-  b2.classList.remove('hint');b2.title='Efectos de sonido (S)';
- }
+ function ui(){}
  /* Audio: genera una nota (oscilador) con frecuencia, duracion, forma de onda y volumen. */
  function o(f,t,d,ty,v,dst,sl){const x=c.createOscillator(),g=c.createGain();x.type=ty||'sine';x.frequency.setValueAtTime(f,t);if(sl)x.frequency.exponentialRampToValueAtTime(sl,t+d);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);x.connect(g);g.connect(dst||sg);x.start(t);x.stop(t+d+.05)}
  /* Audio: genera un golpe de ruido filtrado (percusion y efectos). */
@@ -1916,7 +1900,7 @@ function nextMatch(){
  P.wins=[0,0];P.best=0;P.br=BR;P.duel=duel.slice();P.tournamentMode=tournamentMode;
  P.countryEntrants=countryEntrants;P.countryPopularity=countryPopularity;P.tournamentInteractions=tournamentInteractions;save();aplicarDuelo(duel);
  reset();renderTop3();
- refreshTournamentButton();hype('👋',roundName(c.k),' · '+T[0].n+' vs '+T[1].n,'#ffd566');
+ hype('👋',roundName(c.k),' · '+T[0].n+' vs '+T[1].n,'#ffd566');
  toast(roundName(c.k)+': '+T[0].n+' vs '+T[1].n+' · un solo partido','👋');
 }
 /* ===== RESET DE COPAS (boton "Reiniciar copas" del panel de estadisticas): top 3, copas y torneo vuelven a cero, y arranca una carrera nueva.
@@ -1932,13 +1916,6 @@ window.tortugas.reset=reset;window.tortugas.resetCopas=resetCopas;
 const _resetTurboLimit=reset;
 reset=function(){heartLimitOffset=0;HEART_N=100;matchInteractionCount=0;lastInteractionAt=Date.now();lowActivityFinished=false;_resetTurboLimit()};
 window.tortugas.reset=reset;
-/* Boton ↺ de la barra de herramientas: doble toque (el primero lo arma y brilla 4 s, el segundo reinicia las copas) */
-let rsArm=0;
-$('#bReset').onclick=()=>{
- const b=$('#bReset');
- if(rsArm){clearTimeout(rsArm);rsArm=0;b.classList.remove('hint');resetCopas()}
- else{b.classList.add('hint');toast('Toca ↺ otra vez para reiniciar las copas','🔄');rsArm=setTimeout(()=>{rsArm=0;b.classList.remove('hint')},4000)}
-};
 const _scn=setConnection;
 setConnection=function(s){const k=!!(s.connected||s.isConnected);if(k!==cc){cc=k;A.sfx(k?'on':'off');if(k)toast('Conectado en vivo','🟢')}_scn(s)};
 
@@ -1946,10 +1923,8 @@ setConnection=function(s){const k=!!(s.connected||s.isConnected);if(k!==cc){cc=k
 $('#lanes').addEventListener('click',e=>{if(e.target.closest('.hd'))A.sfx('sel')});
 addEventListener('keydown',e=>{
  if(['1','2','3'].includes(e.key))A.sfx('sel');
- const k=e.key.toLowerCase();if(k==='s')A.tog('sfx');
 });
 ['pointerdown','keydown','touchend'].forEach(ev=>addEventListener(ev,A.unlock,true));
-$('#bSfx').onclick=()=>A.tog('sfx');
 document.addEventListener('visibilitychange',()=>A.vis(!document.hidden));
 
 /* intensidad de la música y recta final */
@@ -2072,7 +2047,6 @@ function renderInactivityCountdown(now=Date.now()){
  if(counter){if(counter.textContent!==text)counter.textContent=text;if(counter.parentNode)counter.parentNode.classList.toggle('low',seconds<=10&&!over)}
 }
 /* BOT ELIMINADO: sin ritmo automatico, sin eventos tortubot, sin apoyo al lado vacio y sin regalos gratis. Solo cuentan los eventos REALES del live. */
-$('#bStat').onclick=()=>stOpen('torneos');  /* abre el panel de torneos */
 $('#bRefresh').onclick=()=>location.reload();
 
 /* ===== PREMIOS POR ACCIONES DE ESPECTADORES ===== */
@@ -2362,21 +2336,13 @@ setInterval(()=>{
  alLast=now;
  if(P.vo)speak(txt,txt,false);else say(txt);
 },1000);
-/* Voz: actualiza el aspecto del boton 🗣️. */
-function voUi(){const b=$('#bVoz');b.classList.toggle('on',!!P.vo);b.classList.toggle('off',!P.vo);b.setAttribute('aria-pressed',!!P.vo)}
-function voTog(){P.vo=P.vo?0:1;save();if(!P.vo){try{SS&&SS.cancel();A.duck(0)}catch(e){}}voUi();toast(P.vo?'Voz en off activada':'Voz en off apagada','🗣️')}
-function voBUi(){const b=$('#bVozB');b.classList.toggle('on',!!P.vb);b.classList.toggle('off',!P.vb);b.setAttribute('aria-pressed',!!P.vb)}
-function voBTog(){P.vb=P.vb?0:1;save();if(!P.vb)chatQueue.length=0;voBUi();toast(P.vb?'Narrador B activado (lee el chat)':'Narrador B apagado','🎙️')}
-$('#bVoz').onclick=voTog;$('#bVozB').onclick=voBTog;
-addEventListener('keydown',e=>{if(e.key.toLowerCase()==='v')voTog()});
 let vPrimed=false;
 ['pointerdown','keydown','touchend'].forEach(ev=>addEventListener(ev,()=>{if(vPrimed||!SS)return;vPrimed=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;SS.speak(u)}catch(e){}},true));
-voUi();voBUi();
 /* ===== AJUSTES FIJOS POR PARTIDA (regla 10): ritmo automatico, voz en off y efectos SIEMPRE activos; musica de fondo SIEMPRE apagada.
  Se aplica al abrir el overlay y al empezar cada ronda, aunque se hubiera cambiado a mano o quedara guardado de antes. ===== */
 function ajustesDePartida(){
  P.vo=1;P.sfx=1;P.mus=0;save();   /* voz y efectos ON · musica OFF */
- A.apply();voUi();                /* refleja el cambio en volumen y botones */
+ A.apply();
 }
 ajustesDePartida();
 /* Capa extra de update(): el color de la perilla de la barra cambia con el avance */
@@ -2886,7 +2852,6 @@ handleLiveEntry=function(e){
 #topbar .foot{margin-top:0!important;flex:none;display:flex;flex-wrap:nowrap;align-items:center;gap:4px;width:100%}
 #topbar .foot .live{flex:0 1 auto;min-width:0;max-width:78px;min-height:30px;font-size:11px;padding:2px 8px;border-radius:8px;display:flex;align-items:center;overflow:hidden;text-overflow:ellipsis}
 #topbar .foot .sm{display:inline-flex;align-items:center;justify-content:center;flex:1 1 0;min-width:0;max-width:44px;height:30px;padding:0;font-size:15px;border-radius:8px}
-#topbar .foot #bVozB{flex-grow:1.4;max-width:52px;font-size:12px;padding:0}
 #topbar .foot .version{display:block;position:absolute;right:2px;top:100%;margin:2px 0 0;padding:1px 7px;border-radius:7px;background:rgba(27,18,10,.75);color:#f1e8d6;font:700 9px/1.3 Inter,sans-serif;letter-spacing:.3px;pointer-events:none}
 #topbar .evs{width:100%;padding:0 4px;border-radius:8px;min-height:0}
 #topbar .st b{font-size:12px}#topbar .st span{font-size:11px}
@@ -3089,39 +3054,12 @@ function pinta(){let n='',r='';
  try{if(BR&&typeof brCur==='function'){const c=brCur();if(c)r=roundName(c.k)}}catch(e){}
  const html='🏆 '+(n||'TORNEO')+(r?' <small>· '+r+'</small>':'');
  if(html!==last){const nuevo=last!=='';last=html;t.innerHTML=html;if(nuevo){t.classList.remove('cambio');void t.offsetWidth;t.classList.add('cambio')}}}
-try{const _r=refreshTournamentButton;refreshTournamentButton=function(){const x=_r.apply(this,arguments);pinta();return x}}catch(e){}
 pinta();setInterval(pinta,1500);
 })();
 </script>
-<!-- ===== PARCHE v3: boton visible ABAJO de la version/limite de taps: elegir torneo manual o AUTO ===== -->
-<style id="sel-torneo">
-#filaVT{position:absolute;right:2px;top:100%;margin-top:2px;z-index:30;display:flex;align-items:center;gap:5px;white-space:nowrap}
-#topbar #filaVT .version{position:static;display:block;margin:0;padding:3px 7px;border-radius:7px;background:rgba(27,18,10,.75);color:#f1e8d6;font:700 9px/1.2 Inter,sans-serif;letter-spacing:.3px;pointer-events:none}
-#bTorneoSel{position:static;margin:0;padding:3px 10px;border-radius:9px;border:2px solid #ffe14d;cursor:pointer;
- background:linear-gradient(#3a2412,#1b0f06);color:#ffe14d;font:800 10px/1.2 Inter,system-ui,sans-serif;letter-spacing:.4px;white-space:nowrap;pointer-events:auto;box-shadow:0 2px 6px rgba(0,0,0,.55)}
-#bTorneoSel.lock{background:linear-gradient(#ffe14d,#e0a800);color:#1a1000;border-color:#fff}
-#bTorneoSel:active{transform:scale(.95)}
-</style>
+<!-- El overlay permanece fijo en el torneo clásico; no se muestra el selector de torneos. -->
 <script>
-(function(){
-const M=TOURNAMENT_OPTIONS.slice(),L=TOURNAMENT_LABELS,SHORT={libre:'LIBRE',clasico:'CLÁSICO',libertadores:'LIBERTADORES',champions:'CHAMPIONS',countries:'MUNDIAL',america:'AMÉRICA',elite:'ELITE'};
-let lock='clasico'; /* cada carga inicia fijo en el torneo clásico */
-const foot=document.querySelector('#topbar .foot')||document.querySelector('.foot');if(!foot)return;
-const b=document.createElement('button');b.id='bTorneoSel';b.type='button';
-const fila=document.createElement('div');fila.id='filaVT';const ver=document.querySelector('.version');
-fila.appendChild(b);if(ver)fila.appendChild(ver);foot.appendChild(fila); /* torneo + version/limite de taps en la misma fila */
-function pinta(){b.textContent=lock?'🔒 '+SHORT[lock]:'🔄 TORNEO: AUTO';b.classList.toggle('lock',!!lock);
- const d=lock?'Torneo fijo: '+L[lock]:'Torneo automático (rota solo al terminar cada copa)';b.title=d+' · tocar para cambiar';b.setAttribute('aria-label',d+'. Tocar para cambiar')}
-function guarda(){try{SRV.set('cluss.torneoLock',lock||'auto')}catch(e){}} /* BACKEND: PUT /api/state/cluss.torneoLock */
-/* fijo = la lista de torneos queda con uno solo, asi la rotacion del juego siempre vuelve a el; AUTO = lista completa */
-function lista(){TOURNAMENT_MODES.splice(0,TOURNAMENT_MODES.length,...(lock?[lock]:M))}
-b.onclick=()=>{const seq=[...M,null];lock=seq[(seq.indexOf(lock)+1)%seq.length];guarda();pinta();
- TOURNAMENT_MODES.splice(0,TOURNAMENT_MODES.length,...M); /* lista completa para poder arrancar el torneo */
- const CT=window.clussTorneo;try{if(lock&&CT&&lock!==CT.modo())CT.start(lock);else if(CT)CT.toast(lock?'Torneo fijo: '+L[lock]:'Torneo automático','🏆')}catch(e){}
- lista()};
-pinta();
-if(lock&&window.clussTorneo&&lock!==window.clussTorneo.modo()){TOURNAMENT_MODES.splice(0,TOURNAMENT_MODES.length,...M);setTimeout(()=>{try{window.clussTorneo.start(lock)}catch(e){}lista()},800)}else lista();
-})();
+TOURNAMENT_MODES.splice(0,TOURNAMENT_MODES.length,'clasico');
 </script>
 <!-- ===== TORNEO LIBRE: votos del chat REAL (sin bots). Cada comentario que nombra un equipo que NO corre le suma 1 voto para la proxima carrera (1 comentario con voto cada 8 s por usuario). No toca el contador ni la pista: todo evento que no es regalo sigue yendo solo al contador de taps. Para quitar: borrar este bloque. ===== -->
 <script>
@@ -3262,10 +3200,6 @@ todo();addEventListener('load',()=>{todo();setTimeout(todo,700)});
 </style>
 <script>
 (function(){
-const foot=document.querySelector('.foot');if(!foot)return;
-const b=document.createElement('button');b.type='button';b.id='bBanderas';b.className='sm';b.textContent='🚩';
-b.title='Banderas de los torneos';b.setAttribute('aria-label','Banderas de los torneos');
-const ref=document.getElementById('bStat');if(ref)ref.after(b);else foot.insertBefore(b,foot.firstChild);
 /* orden de cada columna: Libertadores y Champions como estan; Copa del Mundo con los campeones primero */
 function cols(){
  /* COUNTRY_POOL se amplia luego con el catalogo de ~214 banderas; aqui solo las selecciones del torneo */
@@ -3291,8 +3225,6 @@ function abre(){
  addEventListener('keydown',esc);
  d.querySelector('.x').onclick=cierra;
 }
-b.onclick=abre;
-window.abrirBanderas=abre;
 })();
 </script>
 <!-- ===== PARCHE v9: BANDERAS DE PAISES DIBUJADAS (vectores dentro del HTML). Funcionan sin internet y en Windows, donde los emojis de bandera salen como letras (AR, BR...). Si flagcdn carga, esa imagen va encima ===== -->
@@ -3693,15 +3625,12 @@ const _r=reset;reset=function(){C={ro:0,pi:0,ot:0};st.querySelectorAll('.n').for
 #regalos .n{top:-10px;right:-4px;font-size:13px;min-width:26px;padding:1px 6px}
 </style>
 
-<!-- ===== HERRAMIENTAS SIEMPRE VISIBLES: sin menú desplegable ni cierre automático ===== -->
+<!-- ===== CONTROLES DEL PIE: estado, taps y recarga ===== -->
 <style id="toolbar-visible">
-#topbar .foot{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px!important;align-items:stretch;flex:none;flex-wrap:initial}
+#topbar .foot{display:flex!important;gap:5px!important;align-items:center;flex:none;flex-wrap:nowrap}
 #topbar .foot>*{display:inline-flex!important;position:static!important;min-width:0;max-width:none!important}
-#topbar .foot>.live{width:auto;min-height:36px;justify-content:center;white-space:nowrap;grid-column:span 2}
-#topbar .foot>.sm,#topbar .foot #bCta,#topbar .foot #bLang,#topbar .foot #bVozB{width:auto!important;min-width:0!important;height:36px!important;padding:0 2px!important;font-size:17px}
-#topbar .foot #bCta,#topbar .foot #bLang,#topbar .foot #bVozB{font-size:12px}
-#topbar .foot>#filaVT{grid-column:span 3;display:flex!important;align-items:center;justify-content:center;gap:4px;white-space:normal}
-#topbar .foot>#filaVT .version{position:static!important;margin:0;padding:2px 3px;font-size:8px;white-space:normal}
+#topbar .foot>.live{flex:1 1 auto;width:auto;min-width:90px;min-height:30px;justify-content:flex-start;white-space:nowrap}
+#topbar .foot>.sm{flex:0 0 30px;width:30px!important;min-width:30px!important;height:30px!important;padding:0!important;font-size:15px}
 #connection{cursor:default;touch-action:auto}
 </style>
 
@@ -3784,7 +3713,6 @@ setInterval(ajusta,500);ajusta();
 <!-- ===== MENU INTERNO DE CTA (v2): en la barra de herramientas hay un boton 🎁 que abre un menu a pantalla completa. Ahi se (1) habilita o no el CTA principal de arriba (la franja Rosa / Pistola / Otros) y (2) elige, para el equipo A (carril izquierdo) y el equipo B (derecho), cuales de los 3 regalos (rosita, dona, confeti) se muestran debajo del nombre, y (3) un interruptor MODO DISCRETO para los CTA de equipos (sin brillo ni pulso, solo se mueven; cada uno muestra regalo ➜ bandera del equipo) (se pueden mezclar o dejar ninguno). Son carteles visuales: no suman puntos, solo cuentan los regalos reales. La lista GIFTS se puede editar. No se guarda en ningun lado: arranca siempre apagado (el modo discreto cluss.ctaCalm si va al servidor). Cerrar el menu antes de mostrar pantalla. Para quitar: borrar este bloque. ===== -->
 <style id="cta-menu">
 html.ctaTopOff #regalos{display:none!important}
-#topbar .foot #bCta{flex:0 0 auto;max-width:none;width:auto;padding:0 9px;font:900 12px/1 Inter,sans-serif;letter-spacing:.4px;color:#1a1000;border:2px solid #fff;background:linear-gradient(#ffe14d,#e0a800)}
 #panCta{position:fixed;inset:0;z-index:220;overflow:auto;background:#1b120a;color:#fff;font-family:Inter,system-ui,sans-serif;padding:10px 12px 18px}
 #panCta[hidden]{display:none}
 #panCta .top{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-10px -12px 10px;padding:10px 12px;background:#1b120a;border-bottom:2px solid #6f4a28}
@@ -3805,7 +3733,7 @@ html.ctaTopOff #regalos{display:none!important}
 </style>
 <script>
 (function(){
-const tb=document.getElementById('topbar'),foot=tb&&tb.querySelector('.foot');if(!tb||!foot)return;
+if(!document.getElementById('topbar'))return;
 /* 3 regalos para los CTA de equipos: k = id, ic = icono, n = nombre (solo menu y accesibilidad; en pantalla va solo el icono), a/b = colores. Editar aca para cambiar los regalos. */
 const GIFTS=[
  {k:'rosa',ic:'🌹',n:'ROSITA',a:'#ff5a7a',b:'#b80f3a'},
@@ -3831,9 +3759,6 @@ pan.innerHTML='<div class="top"><h2>🎁 CTA</h2><button type="button" class="x"
  +'<div class="sec"><h3>Equipo A <small id="ctaNA"></small></h3>'+grid('A')+'<p>Tocá un regalo para mostrarlo u ocultarlo debajo del nombre del equipo.</p></div>'
  +'<div class="sec"><h3>Equipo B <small id="ctaNB"></small></h3>'+grid('B')+'</div>';
 document.body.appendChild(pan);
-/* boton en la barra de herramientas */
-const bt=document.createElement('button');bt.className='sm';bt.id='bCta';bt.type='button';bt.textContent='CTA';bt.title='Abrir la página de CTA';bt.setAttribute('aria-label','Abrir la página de CTA');
-const ver=[...foot.children].find(c=>c.id==='filaVT'||c.classList.contains('version'));if(ver)foot.insertBefore(bt,ver);else foot.appendChild(bt);
 /* REGALO AL AZAR: en cada carrera (o al cambiar el duelo) cada equipo sortea su regalo y nunca son el mismo. Solo se ven con el CTA encendido. */
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 function sortea(){st.A=[];st.B=[]} /* CTA de equipos DESACTIVADOS por defecto: ya no se sortea regalo; se pueden activar a mano desde el boton CTA */
@@ -3854,8 +3779,8 @@ function pinta(){
    let fl='';try{fl='<svg class="mf" viewBox="0 0 20 14" aria-hidden="true">'+flag(T[i].id,0,0,20,14)+'</svg>'}catch(e){}
    box.innerHTML=list.map(k=>{const g=GIFTS[KEYS.indexOf(k)];return`<span class="rosaCta" role="img" aria-label="${g.n} ➜ ${nm(i)}" style="--c1:${g.a};--c2:${g.b}"><span class="r">${g.ic}</span><span class="ar" aria-hidden="true">➜</span>${fl}</span>`}).join('')});
  if(cambio)refit()}
-const abrir=()=>{pan.hidden=false;pinta()},cerrar=()=>{pan.hidden=true};
-bt.onclick=abrir;pan.querySelector('#ctaX').onclick=cerrar;
+const cerrar=()=>{pan.hidden=true};
+pan.querySelector('#ctaX').onclick=cerrar;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!pan.hidden)cerrar()});
 pan.querySelector('#ctaTop').onclick=()=>{st.top=!st.top;guardar();pinta();refit()};
 pan.querySelector('#ctaCalm').onclick=()=>{calm=!calm;guardaCalm();pinta()};
@@ -3911,7 +3836,6 @@ new MutationObserver(pinta).observe(L,{childList:true});setInterval(pinta,500);p
 </style>
 <!-- ===== IDIOMA ES/EN (v1): el boton EN/ES (donde estaba el robot) traduce TODO el overlay y la voz en off. Libertadores arranca en espanol; Champions, Copa del Mundo, Copa America y Elite arrancan en ingles. Al cambiar de torneo vuelve al idioma de arranque de ese torneo. Para agregar o corregir frases, editar EXACT / SENT / FRAG / NAMES. Si algo se rompe, borrar este bloque (y el stub de <head>). ===== -->
 <style id="idioma-css">
-#topbar .foot #bLang{flex:0 0 auto;max-width:none;width:auto;min-width:34px;padding:0 8px;font:900 12px/1 Inter,sans-serif;letter-spacing:.4px;color:#fff;border:2px solid #fff;background:linear-gradient(#3b82f6,#1c4fb8)}
 #panLang{position:fixed;inset:0;z-index:230;overflow:auto;background:#1b120a;color:#fff;font-family:Inter,system-ui,sans-serif;padding:10px 12px 18px}
 #panLang[hidden]{display:none}
 #panLang .top{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;margin:-10px -12px 10px;padding:10px 12px;background:#1b120a;border-bottom:2px solid #6f4a28}
@@ -4523,11 +4447,6 @@ render();
 #cronoRegalos #crono,#cronoRegalos #giftTotal{box-sizing:border-box;height:26px;display:flex;align-items:center;gap:4px;padding:0 7px;border-radius:7px;background:#0b0b0b;border-style:solid;border-width:2px;font:800 15px/1 Inter,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.3px;white-space:nowrap;position:static;text-align:left;text-shadow:0 1px 2px #000}
 #cronoRegalos #crono{border-color:#5ec3f2;box-shadow:0 2px 5px rgba(0,0,0,.7),0 0 7px rgba(94,195,242,.5);color:#fff}
 #cronoRegalos #crono i{font-style:normal;font-size:13px}
-#cronoRegalos #rosaToggle{pointer-events:auto;cursor:pointer;box-sizing:border-box;height:26px;min-width:30px;padding:0 5px;border-radius:7px;border:2px solid #ff5a7a;background:#0b0b0b;color:#fff;font:800 14px/1 Inter,sans-serif;box-shadow:0 2px 5px rgba(0,0,0,.7),0 0 7px rgba(255,90,122,.5);display:inline-flex;align-items:center;gap:2px}
-#cronoRegalos #rosaToggle small{font:900 9px/1 Inter,sans-serif;color:#ffe14d}
-#cronoRegalos #rosaToggle.off{border-color:#6b6b6b;box-shadow:0 2px 5px rgba(0,0,0,.7);color:#9a9a9a}
-#cronoRegalos #rosaToggle.off .em{filter:grayscale(1);opacity:.6;text-decoration:line-through}
-#cronoRegalos #rosaToggle.off small{color:#9a9a9a}
 #cronoRegalos #giftTotal{min-width:0;border-color:#ffd34d;box-shadow:0 2px 5px rgba(0,0,0,.7),0 0 7px rgba(255,211,77,.5);color:#ffe14d}
 #cronoRegalos #giftTotal:before{content:"🏆";font-size:13px;font-weight:400}
 /* el numero del chip 🎁 de la franja de estadisticas tambien va en recuadro contrastado */
@@ -4541,14 +4460,7 @@ render();
  const ic=document.createElement('i');ic.setAttribute('aria-hidden','true');ic.textContent='⏱';
  const tx=document.createElement('span');tx.id='cronoTxt';tx.textContent='00:00:00';
  c.append(ic,tx);
- const foot=document.querySelector('#topbar .foot')||document.querySelector('.foot');
- const rb=document.createElement('button');rb.type='button';rb.id='rosaToggle';
- const readRose=()=>SRV.get('cluss.askRose','1')!=='0';
- let roseOn=readRose();
- const paintRose=()=>{rb.classList.toggle('off',!roseOn);rb.setAttribute('aria-pressed',String(roseOn));rb.innerHTML='<span class="em" aria-hidden="true">🌹</span><small>'+(roseOn?'ON':'OFF')+'</small>';const title=roseOn?'Aviso de rositas al comenzar cada carrera: ACTIVADO (tocar para desactivar)':'Aviso de rositas al comenzar cada carrera: DESACTIVADO (tocar para activar)';rb.title=title;rb.setAttribute('aria-label',title)};
- rb.onclick=()=>{roseOn=!roseOn;SRV.set('cluss.askRose',roseOn?'1':'0');paintRose()};
- paintRose();window.askRoseOn=()=>roseOn;
- w.append(rb,c,g);
+ w.append(c,g);
  if(foot&&foot.parentElement){const bar=foot.parentElement,stats=bar.querySelector('#evs');bar.insertBefore(w,stats?stats.nextSibling:foot.nextSibling)}else g.parentNode.insertBefore(w,g);
  let timerStartedAt=Date.now();
  const p=n=>String(n).padStart(2,'0');
@@ -4591,12 +4503,7 @@ render();
   try{
    const {command}=JSON.parse(event.data);
    if(command==='refresh'){location.reload();return}
-   if(command==='reset-cups'){window.tortugas&&window.tortugas.resetCopas&&window.tortugas.resetCopas();return}
-   const controls={
-    language:'bLang',narrator:'bVoz','chat-voice':'bVozB','sound-effects':'bSfx',
-    statistics:'bStat','turbo-down':'bTurboDn','turbo-up':'bTurboUp',
-    tournament:'bTorneoSel',cta:'bCta',flags:'bBanderas','rose-prompt':'rosaToggle',
-   };
+   const controls={'turbo-down':'bTurboDn','turbo-up':'bTurboUp'};
    const control=document.getElementById(controls[command]);
    if(control)control.click();
   }catch(error){console.error('No se pudo ejecutar el comando remoto.',error)}
@@ -5143,17 +5050,10 @@ window.gami={level:LV,honor:HM,voice,
 <style id="toolbar-one-row">
 #topbar .foot{display:flex!important;flex-wrap:nowrap!important;align-items:center;gap:3px!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain}
 #topbar .foot::-webkit-scrollbar{display:none}
-#topbar .foot>.live{flex:0 0 28px;width:28px;max-width:28px!important;padding:0 2px;font-size:8px;justify-content:center}
-#topbar .foot>.sm,#topbar .foot #bCta,#topbar .foot #bLang,#topbar .foot #bVozB{box-sizing:border-box;flex:0 0 25px;width:25px!important;min-width:25px!important;height:25px!important;max-width:25px!important;padding:0!important;border-width:1px;font-size:13px!important;border-radius:6px}
-#topbar .foot #bVozB{flex-basis:29px;width:29px!important;min-width:29px!important;max-width:29px!important;font-size:9px!important}
-#topbar .foot #bCta{flex-basis:30px;width:30px!important;min-width:30px!important;max-width:30px!important;font-size:9px!important}
-#topbar .foot #bLang{font-size:9px!important}
-#topbar .foot>#filaVT{flex:0 0 auto;grid-column:auto;gap:3px;white-space:nowrap}
-#topbar .foot>#filaVT .version{display:none!important}
-#topbar .foot #bTorneoSel{padding:2px 4px;font-size:8px}
+#topbar .foot>.live{flex:1 1 auto;width:auto;min-width:90px;max-width:none!important;padding:0 6px;font-size:10px;justify-content:flex-start;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#topbar .foot>.sm{box-sizing:border-box;flex:0 0 28px;width:28px!important;min-width:28px!important;height:28px!important;max-width:28px!important;padding:0!important;border-width:1px;font-size:13px!important;border-radius:6px}
+#topbar .foot>.version{position:static!important;flex:0 0 auto;margin:0;padding:1px 5px;font-size:8px;white-space:nowrap}
 #topbar>#cronoRegalos{flex:0 0 auto;width:100%;justify-content:center;gap:4px;margin:0;transform:translateY(-5px)}
-#topbar>#cronoRegalos #rosaToggle{height:22px;min-width:23px;padding:0 3px;font-size:11px}
-#topbar>#cronoRegalos #rosaToggle small{font-size:7px}
 #topbar>#cronoRegalos #crono,#topbar>#cronoRegalos #giftTotal{height:22px;padding:0 3px;font-size:10px}
 #topbar>#cronoRegalos #crono i,#topbar>#cronoRegalos #giftTotal:before{font-size:9px}
 </style>
