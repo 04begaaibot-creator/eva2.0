@@ -658,7 +658,7 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
 <div class="win" id="win" role="alertdialog" aria-label="Ganador"></div>
 </section>
 <!-- Herramientas visibles: estado de conexión, ajuste del límite de taps y recarga. -->
-<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">cluss</span><button class="sm" id="bTurboDn" type="button" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" type="button" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" type="button" aria-label="Refrescar página" title="Refrescar página">🔄</button><span class="version" aria-label="Límite de taps del turbo, versión y firma del backend"><span id="turboLim">⚡ Límite 100 taps</span> · v1.2.2 · <span id="deploySignature" aria-label="Firma del backend">srv:…</span></span></div>
+<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">conectando</span><button class="sm" id="bTurboDn" type="button" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" type="button" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" type="button" aria-label="Refrescar página" title="Refrescar página">🔄</button><span class="version" aria-label="Límite de taps del turbo, versión y firma del backend"><span id="turboLim">⚡ Límite 100 taps</span> · v1.2.2 · <span id="deploySignature" aria-label="Firma del backend">srv:…</span></span></div>
 <!-- FRANJA DE ESTADISTICAS del live: solo eventos REALES (los bots y los toques manuales no cuentan). El contador de regalos es solo informativo -->
 <div class="evs" id="evs" role="status" aria-label="Estadisticas del live"><div class="st" data-k="member" title="Unidos"><b>👥</b><span>0</span></div><div class="st" data-k="chat" title="Comentarios"><b>💬</b><span>0</span></div><div class="st" data-k="like" title="Me gusta"><b>❤️</b><span>0</span></div><div class="st" data-k="follow" title="Seguidores nuevos"><b>➕</b><span>0</span></div><div class="st" data-k="share" title="Compartidos"><b>↗️</b><span>0</span></div></div>
 <div id="giftTotal" role="status" aria-label="Regalos recibidos: 0">0</div>
@@ -1048,7 +1048,6 @@ const PTS={share:5*HARD, /* compartir = 5 rayos */chat:10*HARD, /* comentar = 10
 const TAP_POLICY=window.TORTUWORLD_ACTIVITY_POLICY;
 let sp=[1,1,1],lastTick=performance.now();
 const newSpeeds=()=>{sp=T.map(()=>0.985+Math.random()*0.03)};newSpeeds();
-const USER='cluss'.slice(0,10);
 const $=s=>document.querySelector(s);
 const FLAG_C={cp:['#0b3d91','#c8102e'],li:['#ffffff','#111111'],gu:['#f5c400','#111111'],lu:['#2563eb','#f5c400'],na:['#c8102e','#ffffff'],sa:['#f5c400','#1d4ed8'],to:['#16a34a','#ffffff']};
 function flag(k,x,y,w,h){
@@ -1240,9 +1239,14 @@ function handleLiveEntry(entry){
 /* Pinta el estado de conexion (verde conectado, naranja conectando, rojo sin conexion). Lo llaman los mensajes SSE "status" */
 function setConnection(status){
  const el=$('#connection'),connected=Boolean(status.connected||status.isConnected);
+ const username=String(status.username||'').trim().replace(/^@+/,'');
+ const stateLabel=connected?'conectado':status.status==='failed'?'sin conexión':status.status==='reconnecting'?'reconectando':'conectando';
+ const userLabel=username?'@'+username:stateLabel;
+ el.textContent=userLabel;
+ el.title=username?stateLabel+' a '+userLabel:stateLabel;
  el.classList.toggle('connected',connected);
  el.classList.toggle('connecting',!connected&&['connecting','reconnecting'].includes(status.status));
- el.setAttribute('aria-label',`${USER}: ${connected?'en vivo':status.status==='failed'?'sin conexión':'conectando'}`);
+ el.setAttribute('aria-label',username?stateLabel+' a '+userLabel:stateLabel);
 }
 /* Conexion con el backend: eventos reales de TikTok por SSE */
 const receivedEvents=[];
@@ -1465,7 +1469,6 @@ fetch('/api/reconnect',{method:'POST'}).then(async response=>{
  setConnection({connected:false,status:'failed'});
  console.error(error);
 });
-$('#connection').textContent=USER;
 setInterval(()=>{
  const now=performance.now(),dt=Math.min(2,(now-lastTick)/1000);lastTick=now;
  if(over)return;

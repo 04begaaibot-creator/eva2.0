@@ -6,6 +6,7 @@ const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'v21.html'), 'utf8');
+const connectionFunction = html.match(/function setConnection\(status\)\{[\s\S]*?\n\}/)?.[0];
 
 test('classic tournament starts locked in Spanish without a tournament selector', () => {
   assert.match(html, /let tournamentMode='clasico'/);
@@ -34,6 +35,38 @@ test('overlay toolbar keeps only user status, reload, and tap limit controls', (
     .map(([, id]) => id);
   assert.deepEqual(buttonIds, ['bTurboDn', 'bTurboUp', 'bRefresh']);
   assert.doesNotMatch(html, /id=['"](?:bTournament|bTorneoSel|bBanderas|bCta|rosaToggle)['"]/);
+});
+
+test('connection indicator shows the actual TikTok account and its connection state', () => {
+  const classes = new Set();
+  const attributes = {};
+  const element = {
+    classList: {
+      toggle(name, enabled) {
+        if (enabled) classes.add(name);
+        else classes.delete(name);
+      },
+    },
+    setAttribute(name, value) {
+      attributes[name] = value;
+    },
+  };
+  const context = { $: () => element };
+
+  vm.runInNewContext(`${connectionFunction}; setConnection({
+    connected: false, username: '@tortulive', status: 'connecting',
+  });`, context);
+  assert.equal(element.textContent, '@tortulive');
+  assert.equal(element.title, 'conectando a @tortulive');
+  assert.equal(attributes['aria-label'], 'conectando a @tortulive');
+  assert.equal(classes.has('connecting'), true);
+
+  vm.runInNewContext(`setConnection({
+    connected: true, username: 'tortulive', status: 'connected',
+  });`, context);
+  assert.equal(element.textContent, '@tortulive');
+  assert.equal(element.title, 'conectado a @tortulive');
+  assert.equal(classes.has('connected'), true);
 });
 
 test('empty free-tournament lanes do not show waiting-team labels', () => {
