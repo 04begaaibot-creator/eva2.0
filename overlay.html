@@ -388,8 +388,8 @@ background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(0,0,0,.4)),r
 .nf{display:none} /* huevos grandes quitados */
 .nf .ua,.nf .ua.ph{width:27px;height:34px;border-width:2.5px;font-size:15px;line-height:28px;box-shadow:0 0 0 1.5px #fff,0 2px 5px rgba(0,0,0,.6)}
 .nf .ua.bt{font-size:15px}
-/* barra de herramientas: incluye refrescar y version */
-.foot{gap:4px}.foot .sm{width:30px;flex:none}.foot .live{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}.foot .version{margin-left:auto;white-space:nowrap;color:#f1e8d6;font:700 8px Inter,sans-serif}
+/* barra de herramientas compacta */
+.foot{gap:4px}.foot .sm{width:30px;flex:none}.foot .live{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 /* panel de estadisticas */
 #stp{position:absolute;inset:0;z-index:30;background:#1b120a;color:#f3ece1;padding:10px;display:flex;flex-direction:column;gap:8px;font:12px/1.4 Inter,sans-serif}
 #stp[hidden]{display:none}
@@ -658,7 +658,7 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
 <div class="win" id="win" role="alertdialog" aria-label="Ganador"></div>
 </section>
 <!-- Herramientas visibles: estado de conexión, ajuste del límite de taps y recarga. -->
-<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">conectando</span><button class="sm" id="bTurboDn" type="button" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" type="button" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" type="button" aria-label="Refrescar página" title="Refrescar página">🔄</button><button class="sm" id="bBackend" type="button" aria-label="Abrir herramientas del backend" title="Herramientas del backend">⚙️</button><span class="version" aria-label="Límite de taps, versión y firma del backend"><span id="turboLim">⚡ Límite 50 taps</span> · v1.2.2 · <span id="deploySignature" aria-label="Firma del backend">srv:…</span></span></div>
+<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">conectando</span><button class="sm" id="bTurboDn" type="button" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" type="button" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" type="button" aria-label="Refrescar página" title="Refrescar página">🔄</button><button class="sm" id="bBackend" type="button" aria-label="Abrir herramientas del backend" title="Herramientas del backend">⚙️</button></div>
 <!-- FRANJA DE ESTADISTICAS del live: solo eventos REALES (los bots y los toques manuales no cuentan). El contador de regalos es solo informativo -->
 <div class="evs" id="evs" role="status" aria-label="Estadisticas del live"><div class="st" data-k="member" title="Unidos"><b>👥</b><span>0</span></div><div class="st" data-k="chat" title="Comentarios"><b>💬</b><span>0</span></div><div class="st" data-k="like" title="Me gusta"><b>❤️</b><span>0</span></div><div class="st" data-k="follow" title="Seguidores nuevos"><b>➕</b><span>0</span></div><div class="st" data-k="share" title="Compartidos"><b>↗️</b><span>0</span></div></div>
 <div id="giftTotal" role="status" aria-label="Regalos recibidos: 0">0</div>
@@ -1468,21 +1468,6 @@ const source=new EventSource('/api/events');
 source.addEventListener('status',event=>{const payload=JSON.parse(event.data);setConnection(payload);recordReceivedEvent('status',payload)});
 source.addEventListener('update',event=>window.liveEventMonitor.receive(JSON.parse(event.data)));
 source.onerror=()=>{const status={connected:false,status:'reconnecting'};setConnection(status);recordReceivedEvent('connection',status)};
-const deploySignatureElement=document.getElementById('deploySignature');
-fetch('/api/deployment-signature',{cache:'no-store'}).then(response=>{
- if(!response.ok)throw new Error('El backend respondió '+response.status+'.');
- return response.json();
-}).then(payload=>{
- if(!payload||typeof payload.signature!=='string'||!/^sha256-[a-f0-9]{16}$/.test(payload.signature)){
-  throw new Error('La firma recibida del backend no es válida.');
- }
- deploySignatureElement.textContent='srv:'+payload.signature.slice(-8);
- deploySignatureElement.title='Firma del backend: '+payload.signature;
-}).catch(error=>{
- deploySignatureElement.textContent='srv:error';
- deploySignatureElement.title='No se pudo consultar la firma del backend.';
- console.error('No se pudo cargar la firma del backend.',error);
-});
 fetch('/api/reconnect',{method:'POST'}).then(async response=>{
  if(!response.ok&&response.status!==409){
   const result=await response.json();
@@ -1705,9 +1690,7 @@ function syncHeartLimit(){
  if(n<prevN)setTimeout(()=>T.forEach((_,i)=>{if(heart[i]>=HEART_N&&!over)heartAdd(i,0)}),0);
 }
 /* Dibuja el corazon (barra de likes) del equipo t. */
-function showTurboLim(){const L=document.getElementById('turboLim');if(L)L.textContent='⚡ Límite '+HEART_N+' taps'} /* etiqueta de abajo, junto a la version */
-showTurboLim();
-function renderHeart(t){showTurboLim();const h=$('#hb'+t);if(!h)return;h.querySelector('b').style.width=(heart[t]/HEART_N*100)+'%';h.querySelector('em').textContent=Math.floor(heart[t])+'/'+HEART_N;h.setAttribute('aria-valuemax',HEART_N);h.setAttribute('aria-valuenow',Math.floor(heart[t]));h.setAttribute('aria-label','Contador tap tap de '+T[t].n+'; solo eventos reales suman taps; '+HEART_N+' taps avanzan '+HEART_TURBO_PROGRESS+'% y activan turbo');h.title='Solo los eventos reales de TikTok suman taps; al llegar a '+HEART_N+' se activa el turbo'}
+function renderHeart(t){const h=$('#hb'+t);if(!h)return;h.querySelector('b').style.width=(heart[t]/HEART_N*100)+'%';h.querySelector('em').textContent=Math.floor(heart[t])+'/'+HEART_N;h.setAttribute('aria-valuemax',HEART_N);h.setAttribute('aria-valuenow',Math.floor(heart[t]));h.setAttribute('aria-label','Contador tap tap de '+T[t].n+'; solo eventos reales suman taps; '+HEART_N+' taps avanzan '+HEART_TURBO_PROGRESS+'% y activan turbo');h.title='Solo los eventos reales de TikTok suman taps; al llegar a '+HEART_N+' se activa el turbo'}
 T.forEach((_,i)=>renderHeart(i));
 /* +N flotante sobre el contador en CADA tap/me gusta: el numero crece con la cantidad (rafagas de TikTok) */
 function tapPop(h,n){
@@ -2960,7 +2943,6 @@ handleLiveEntry=function(e){
 #topbar .foot{margin-top:0!important;flex:none;display:flex;flex-wrap:nowrap;align-items:center;gap:4px;width:100%}
 #topbar .foot .live{flex:0 1 auto;min-width:0;max-width:78px;min-height:30px;font-size:11px;padding:2px 8px;border-radius:8px;display:flex;align-items:center;overflow:hidden;text-overflow:ellipsis}
 #topbar .foot .sm{display:inline-flex;align-items:center;justify-content:center;flex:1 1 0;min-width:0;max-width:44px;height:30px;padding:0;font-size:15px;border-radius:8px}
-#topbar .foot .version{display:block;position:absolute;right:2px;top:100%;margin:2px 0 0;padding:1px 7px;border-radius:7px;background:rgba(27,18,10,.75);color:#f1e8d6;font:700 9px/1.3 Inter,sans-serif;letter-spacing:.3px;pointer-events:none}
 #topbar .evs{width:100%;padding:0 4px;border-radius:8px;min-height:0}
 #topbar .st b{font-size:12px}#topbar .st span{font-size:11px}
 .side>.plate{display:none}
@@ -4565,17 +4547,15 @@ document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!panel.hidd
 render();
 })();
 </script>
-<!-- ===== CRONOMETRO + CONTADOR DE REGALOS EN RECUADRO (v1): a la izquierda del contador de regalos (abajo a la derecha) corre un cronometro hh:mm:ss que mide cuanto tiempo lleva activo el overlay (desde que carga la pagina; no se reinicia con las carreras). Los dos van en recuadros de alto contraste. El numero de regalos sigue siendo #giftTotal (lo actualiza el motor). Para quitar: borrar este bloque. ===== -->
+<!-- ===== CRONOMETRO + CONTADOR DE REGALOS: visibles en la fila de herramientas, sin iconos. ===== -->
 <style id="crono-regalos">
 /* Cronometro y contador de regalos integrados en la barra visible. */
 #cronoRegalos{position:static;flex:0 0 auto;margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:6px;pointer-events:none}
 #topbar>#cronoRegalos{width:100%;justify-content:center;margin:0}
-/* cronometro y contador de regalos: MISMO tamano (alto 26 px, borde 2 px, letra 15 px); solo cambia el color del borde */
+/* cronometro y contador de regalos, sin iconos */
 #cronoRegalos #crono,#cronoRegalos #giftTotal{box-sizing:border-box;height:26px;display:flex;align-items:center;gap:4px;padding:0 7px;border-radius:7px;background:#0b0b0b;border-style:solid;border-width:2px;font:800 15px/1 Inter,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.3px;white-space:nowrap;position:static;text-align:left;text-shadow:0 1px 2px #000}
 #cronoRegalos #crono{border-color:#5ec3f2;box-shadow:0 2px 5px rgba(0,0,0,.7),0 0 7px rgba(94,195,242,.5);color:#fff}
-#cronoRegalos #crono i{font-style:normal;font-size:13px}
 #cronoRegalos #giftTotal{min-width:0;border-color:#ffd34d;box-shadow:0 2px 5px rgba(0,0,0,.7),0 0 7px rgba(255,211,77,.5);color:#ffe14d}
-#cronoRegalos #giftTotal:before{content:"🏆";font-size:13px;font-weight:400}
 /* el numero del chip 🎁 de la franja de estadisticas tambien va en recuadro contrastado */
 #evs .st[data-k="gift"] span{background:#ffe14d;color:#111;text-shadow:none;padding:1px 5px;border-radius:5px;font-weight:900}
 </style>
@@ -4584,11 +4564,10 @@ render();
  const g=document.getElementById('giftTotal');if(!g||document.getElementById('cronoRegalos'))return;
  const w=document.createElement('div');w.id='cronoRegalos';
  const c=document.createElement('div');c.id='crono';c.setAttribute('role','timer');c.title='Tiempo con el overlay activo (hh:mm:ss)';
- const ic=document.createElement('i');ic.setAttribute('aria-hidden','true');ic.textContent='⏱';
  const tx=document.createElement('span');tx.id='cronoTxt';tx.textContent='00:00:00';
- c.append(ic,tx);
+ c.append(tx);
  w.append(c,g);
- const ft=document.querySelector('#topbar .foot')||document.querySelector('.foot');if(ft)ft.appendChild(w);else g.parentNode.insertBefore(w,g); /* en la fila de herramientas, donde estaban el limite y la version */
+ const ft=document.querySelector('#topbar .foot')||document.querySelector('.foot');if(ft)ft.appendChild(w);else g.parentNode.insertBefore(w,g);
  let timerStartedAt=Date.now();
  const p=n=>String(n).padStart(2,'0');
  function tick(){const s=Math.max(0,Math.floor((Date.now()-timerStartedAt)/1000)),t=p(Math.floor(s/3600))+':'+p(Math.floor(s%3600/60))+':'+p(s%60);if(tx.textContent!==t){tx.textContent=t;c.setAttribute('aria-label','Tiempo activo '+t)}}
@@ -5168,16 +5147,12 @@ window.gami={level:LV,honor:HM,voice,
 #topbar .foot::-webkit-scrollbar{display:none}
 #topbar .foot>.live{flex:1 1 auto;width:auto;min-width:90px;max-width:none!important;padding:0 6px;font-size:10px;justify-content:flex-start;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #topbar .foot>.sm{box-sizing:border-box;flex:0 0 28px;width:28px!important;min-width:28px!important;height:28px!important;max-width:28px!important;padding:0!important;border-width:1px;font-size:13px!important;border-radius:6px}
-#topbar .foot>.version{position:static!important;flex:0 0 auto;margin:0;padding:1px 5px;font-size:8px;white-space:nowrap}
 #topbar>#cronoRegalos{flex:0 0 auto;width:100%;justify-content:center;gap:4px;margin:0;transform:translateY(-5px)}
 #topbar .foot>#cronoRegalos{flex:0 0 auto;width:auto;margin:0 0 0 auto;transform:none;justify-content:flex-end;gap:4px}
 #topbar .foot>#cronoRegalos #crono,#topbar .foot>#cronoRegalos #giftTotal{height:24px;padding:0 5px;font-size:11px}
-#topbar .foot>#cronoRegalos #crono i,#topbar .foot>#cronoRegalos #giftTotal:before{font-size:10px}
 /* contador de regalos al DOBLE de tamano (cronometro igual) */
-#topbar .foot>#cronoRegalos #giftTotal{height:48px;padding:0 10px;font-size:22px;gap:6px;border-radius:10px}
-#topbar .foot>#cronoRegalos #giftTotal:before{content:none!important;display:none!important} /* solo el numero, sin icono */
+#topbar .foot>#cronoRegalos #giftTotal{height:48px;padding:0 10px;font-size:22px;border-radius:10px}
 #topbar>#cronoRegalos #crono,#topbar>#cronoRegalos #giftTotal{height:22px;padding:0 3px;font-size:10px}
-#topbar>#cronoRegalos #crono i,#topbar>#cronoRegalos #giftTotal:before{font-size:9px}
 </style>
 <style id="regalos-vacio">#giftTotal.sin{display:none!important}</style>
 <script>

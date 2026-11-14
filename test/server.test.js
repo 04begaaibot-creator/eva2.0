@@ -128,8 +128,8 @@ test('serves overlay.html as the main Cluss TikTok overlay', async (t) => {
     assert.match(servedHtml, /new EventSource\('\/api\/events'\)/);
     assert.match(servedHtml, /source\.addEventListener\('status'/);
     assert.match(servedHtml, /source\.addEventListener\('update'/);
-    assert.match(servedHtml, /id="deploySignature"/);
-    assert.match(servedHtml, /fetch\('\/api\/deployment-signature',\{cache:'no-store'\}\)/);
+    assert.doesNotMatch(servedHtml, /id="deploySignature"|id="turboLim"|class="version"/);
+    assert.doesNotMatch(servedHtml, /fetch\('\/api\/deployment-signature',\{cache:'no-store'\}\)/);
     assert.match(servedHtml, /toolsSource\.addEventListener\('game-command'/);
     assert.match(servedHtml, /if\(command==='refresh'\)\{location\.reload\(\);return\}/);
     assert.match(servedHtml, /\/api\/game-tools\/overlay-heartbeat/);

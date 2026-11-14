@@ -41,6 +41,11 @@ test('overlay toolbar includes user status, reload, tap limit, and backend contr
   assert.deepEqual(buttonIds, ['bTurboDn', 'bTurboUp', 'bRefresh', 'bBackend']);
   assert.match(toolbar, /id="bBackend"[^>]*aria-label="Abrir herramientas del backend"/);
   assert.match(html, /\$\('#bBackend'\)\.onclick=\(\)=>\{location\.href='\/backend'\}/);
+  assert.doesNotMatch(toolbar, /class="version"|id="turboLim"|id="deploySignature"/);
+  assert.match(html, /w\.id='cronoRegalos'/);
+  assert.match(html, /tx\.id='cronoTxt'/);
+  assert.match(html, /#cronoRegalos #giftTotal\{[^}]*color:#ffe14d/);
+  assert.doesNotMatch(html, /#cronoRegalos #giftTotal:before|ic\.textContent='⏱'/);
   assert.doesNotMatch(html, /id=['"](?:bTournament|bTorneoSel|bBanderas|bCta|rosaToggle)['"]/);
 });
 
