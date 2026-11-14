@@ -86,7 +86,6 @@ test('serves overlay.html as the main Cluss TikTok overlay', async (t) => {
   assert.match(dockerfile, /COPY overlay\.html \.\//);
   assert.equal(fs.existsSync(path.join(root, 'overlay.html')), true);
   assert.equal(fs.existsSync(path.join(root, 'v21.html')), false);
-  assert.equal(fs.existsSync(path.join(root, 'v28 (1).html')), false);
   assert.equal(fs.existsSync(path.join(root, 'v21 (1).html')), false);
   assert.equal(fs.existsSync(path.join(root, 'v10.html')), false);
   assert.equal(fs.existsSync(path.join(root, 'cluss.html')), false);

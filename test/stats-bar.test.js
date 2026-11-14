@@ -32,13 +32,15 @@ test('classic mode runs expanded best-of-three club fixtures', () => {
   assert.match(html, /cp:\['#0b3d91','#c8102e'\]/);
 });
 
-test('overlay toolbar keeps only user status, reload, and tap limit controls', () => {
+test('overlay toolbar includes user status, reload, tap limit, and backend controls', () => {
   const toolbar = html.match(/<div class="foot">([\s\S]*?)<\/div>/)?.[1] || '';
   assert.ok(toolbar, 'toolbar should exist');
   assert.match(toolbar, /id="connection"/);
   const buttonIds = [...toolbar.matchAll(/<button\b[^>]*id="([^"]+)"/g)]
     .map(([, id]) => id);
-  assert.deepEqual(buttonIds, ['bTurboDn', 'bTurboUp', 'bRefresh']);
+  assert.deepEqual(buttonIds, ['bTurboDn', 'bTurboUp', 'bRefresh', 'bBackend']);
+  assert.match(toolbar, /id="bBackend"[^>]*aria-label="Abrir herramientas del backend"/);
+  assert.match(html, /\$\('#bBackend'\)\.onclick=\(\)=>\{location\.href='\/backend'\}/);
   assert.doesNotMatch(html, /id=['"](?:bTournament|bTorneoSel|bBanderas|bCta|rosaToggle)['"]/);
 });
 

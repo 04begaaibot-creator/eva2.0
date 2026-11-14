@@ -658,7 +658,7 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)flush
 <div class="win" id="win" role="alertdialog" aria-label="Ganador"></div>
 </section>
 <!-- Herramientas visibles: estado de conexión, ajuste del límite de taps y recarga. -->
-<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">conectando</span><button class="sm" id="bTurboDn" type="button" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" type="button" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" type="button" aria-label="Refrescar página" title="Refrescar página">🔄</button><span class="version" aria-label="Límite de taps, versión y firma del backend"><span id="turboLim">⚡ Límite 50 taps</span> · v1.2.2 · <span id="deploySignature" aria-label="Firma del backend">srv:…</span></span></div>
+<div class="foot"><span class="live connecting" id="connection" role="status" aria-live="polite">conectando</span><button class="sm" id="bTurboDn" type="button" aria-label="Bajar el límite de taps del turbo en 10" title="Turbo: 10 taps menos">➖</button><button class="sm" id="bTurboUp" type="button" aria-label="Subir el límite de taps del turbo en 10" title="Turbo: 10 taps más">➕</button><button class="sm" id="bRefresh" type="button" aria-label="Refrescar página" title="Refrescar página">🔄</button><button class="sm" id="bBackend" type="button" aria-label="Abrir herramientas del backend" title="Herramientas del backend">⚙️</button><span class="version" aria-label="Límite de taps, versión y firma del backend"><span id="turboLim">⚡ Límite 50 taps</span> · v1.2.2 · <span id="deploySignature" aria-label="Firma del backend">srv:…</span></span></div>
 <!-- FRANJA DE ESTADISTICAS del live: solo eventos REALES (los bots y los toques manuales no cuentan). El contador de regalos es solo informativo -->
 <div class="evs" id="evs" role="status" aria-label="Estadisticas del live"><div class="st" data-k="member" title="Unidos"><b>👥</b><span>0</span></div><div class="st" data-k="chat" title="Comentarios"><b>💬</b><span>0</span></div><div class="st" data-k="like" title="Me gusta"><b>❤️</b><span>0</span></div><div class="st" data-k="follow" title="Seguidores nuevos"><b>➕</b><span>0</span></div><div class="st" data-k="share" title="Compartidos"><b>↗️</b><span>0</span></div></div>
 <div id="giftTotal" role="status" aria-label="Regalos recibidos: 0">0</div>
@@ -2101,6 +2101,7 @@ function renderInactivityCountdown(now=Date.now()){
 }
 /* BOT ELIMINADO: sin ritmo automatico, sin eventos tortubot, sin apoyo al lado vacio y sin regalos gratis. Solo cuentan los eventos REALES del live. */
 $('#bRefresh').onclick=()=>location.reload();
+$('#bBackend').onclick=()=>{location.href='/backend'};
 
 /* ===== PREMIOS POR ACCIONES DE ESPECTADORES ===== */
 const us=new Map(),joined=new Set(),welcomed=new Set(),turbo=[0,0,0],turboPower=[0,0,0],giftTurboUntil=[0,0,0];let lastMvp=null,hyT;window.__gamiTurbo={turbo:turbo,giftTurboUntil:giftTurboUntil};
