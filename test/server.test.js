@@ -124,12 +124,29 @@ test('serves overlay.html as the main Cluss TikTok overlay', async (t) => {
     assert.equal(monitorService.state.isConnected, false, 'serving the overlay must not connect TikTok');
     assert.match(rootResponse.headers.get('cache-control'), /no-store/);
     const servedHtml = await rootResponse.text();
-    assert.equal(servedHtml, fs.readFileSync(path.join(root, 'overlay.html'), 'utf8'));
+    const deploymentResponse = await fetch(`${baseUrl}/api/deployment-signature`);
+    assert.equal(deploymentResponse.status, 200);
+    assert.match(deploymentResponse.headers.get('cache-control'), /no-store/);
+    const { signature } = await deploymentResponse.json();
+    assert.match(signature, /^sha256-[a-f0-9]{16}$/);
+    assert.equal(
+      servedHtml,
+      fs.readFileSync(path.join(root, 'overlay.html'), 'utf8')
+        .replace('__CLUSS_DEPLOYMENT_SIGNATURE__', signature),
+    );
+    assert.match(servedHtml, /fetch\('\/api\/deployment-signature',\{cache:'no-store'\}\)/);
+    assert.match(servedHtml, /async function clearClussOverlayCache\(\)/);
+    assert.match(servedHtml, /keys\.filter\(key=>key\.startsWith\('tortu-shell-'\)\)/);
+    assert.match(servedHtml, /await clearClussOverlayCache\(\)/);
+    assert.ok(
+      servedHtml.indexOf('await clearClussOverlayCache()')
+        < servedHtml.indexOf('location.replace(url.href)'),
+      'the app cache should be cleared before navigating to the deployed version',
+    );
     assert.match(servedHtml, /new EventSource\('\/api\/events'\)/);
     assert.match(servedHtml, /source\.addEventListener\('status'/);
     assert.match(servedHtml, /source\.addEventListener\('update'/);
     assert.doesNotMatch(servedHtml, /id="deploySignature"|id="turboLim"|class="version"/);
-    assert.doesNotMatch(servedHtml, /fetch\('\/api\/deployment-signature',\{cache:'no-store'\}\)/);
     assert.match(servedHtml, /toolsSource\.addEventListener\('game-command'/);
     assert.match(servedHtml, /if\(command==='refresh'\)\{location\.reload\(\);return\}/);
     assert.match(servedHtml, /\/api\/game-tools\/overlay-heartbeat/);
@@ -149,10 +166,6 @@ test('serves overlay.html as the main Cluss TikTok overlay', async (t) => {
     assert.match(servedHtml, /id="copyLiveLog"/);
     assert.match(servedHtml, /navigator\.clipboard\.writeText/);
 
-    const deploymentResponse = await fetch(`${baseUrl}/api/deployment-signature`);
-    assert.equal(deploymentResponse.status, 200);
-    assert.match(deploymentResponse.headers.get('cache-control'), /no-store/);
-    assert.match((await deploymentResponse.json()).signature, /^sha256-[a-f0-9]{16}$/);
     assert.match(servedHtml, /if\(!isLiveDiagnosticActive\(\)\)return/);
     assert.match(servedHtml, /window\.liveEventMonitor\.completeRound\(T\[i\]\.id\)/);
     assert.match(servedHtml, /pendingChatRecords\.push/);

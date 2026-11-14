@@ -114,6 +114,40 @@ Las reglas marcadas (propuesto) aun no estan confirmadas por el autor.
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta name="cluss-deployment-signature" content="__CLUSS_DEPLOYMENT_SIGNATURE__">
+<script>
+let deploymentCheckPromise=null;
+async function clearClussOverlayCache(){
+ if(!('caches' in window))return;
+ const keys=await caches.keys();
+ await Promise.all(keys.filter(key=>key.startsWith('tortu-shell-')).map(key=>caches.delete(key)));
+}
+window.checkClussDeploymentVersion=()=>{
+ if(deploymentCheckPromise)return deploymentCheckPromise;
+ deploymentCheckPromise=(async()=>{
+ const signaturePattern=/^sha256-[a-f0-9]{16}$/;
+ const pageSignature=document.querySelector('meta[name="cluss-deployment-signature"]')?.content;
+ if(!signaturePattern.test(pageSignature||'')){console.error('No se pudo identificar la versión del overlay.');return}
+ try{
+  const response=await fetch('/api/deployment-signature',{cache:'no-store'});
+  if(!response.ok)throw new Error('El backend no pudo informar su versión de despliegue.');
+  const result=await response.json();
+  if(typeof result.signature!=='string'||!signaturePattern.test(result.signature))throw new Error('El backend devolvió una firma de despliegue no válida.');
+  const url=new URL(location.href);
+  if(result.signature===pageSignature){
+   if(url.searchParams.has('_cluss_deploy')){url.searchParams.delete('_cluss_deploy');history.replaceState(null,'',url)}
+   return
+  }
+  if(url.searchParams.get('_cluss_deploy')===result.signature){console.error('El overlay sigue desactualizado después de intentar actualizarlo.');return}
+  url.searchParams.set('_cluss_deploy',result.signature);
+  try{await clearClussOverlayCache()}catch(error){console.warn('No se pudo borrar el caché del overlay antes de actualizar.',error)}
+  location.replace(url.href)
+ }catch(error){console.warn('No se pudo comprobar la versión del overlay.',error)}
+ })().finally(()=>{deploymentCheckPromise=null});
+ return deploymentCheckPromise;
+};
+window.checkClussDeploymentVersion();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#07262B">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1956,7 +1990,7 @@ reset=function(){ajustesDePartida();seen.clear();known.clear();userScore.clear()
 window.tortugas.reset=reset;window.tortugas.resetCopas=resetCopas;
 const _resetTurboLimit=reset;
 setInterval(()=>{try{if(!over)syncHeartLimit()}catch(e){}},250); /* sube el limite cada 10% de pista */
-reset=function(){heartLimitOffset=0;HEART_N=HEART_START;matchInteractionCount=0;lastInteractionAt=Date.now();lowActivityFinished=false;_resetTurboLimit()};
+reset=function(){if(window.checkClussDeploymentVersion)window.checkClussDeploymentVersion();heartLimitOffset=0;HEART_N=HEART_START;matchInteractionCount=0;lastInteractionAt=Date.now();lowActivityFinished=false;_resetTurboLimit()};
 window.tortugas.reset=reset;
 const _scn=setConnection;
 setConnection=function(s){const k=!!(s.connected||s.isConnected);if(k!==cc){cc=k;A.sfx(k?'on':'off');if(k)toast('Conectado en vivo','🟢')}_scn(s)};

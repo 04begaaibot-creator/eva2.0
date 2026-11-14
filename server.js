@@ -54,7 +54,7 @@ function createWebserver({
   });
 
   app.use(express.json({ limit: '1mb', strict: false }));
-  registerOverlayRoutes(app, { persistence, gameTools });
+  registerOverlayRoutes(app, { persistence, gameTools, deploymentSignature });
   tiktok.registerRoutes(app);
 
   app.get('/health', (request, response) => {

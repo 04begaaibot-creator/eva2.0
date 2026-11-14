@@ -1,11 +1,25 @@
 const path = require('node:path');
+const fs = require('node:fs');
 const express = require('express');
 
-function registerOverlayRoutes(app, { persistence, gameTools, overlayPath } = {}) {
+function registerOverlayRoutes(app, {
+  persistence,
+  gameTools,
+  overlayPath,
+  deploymentSignature,
+} = {}) {
   const mainOverlayPath = overlayPath || path.join(__dirname, '..', '..', 'overlay.html');
+  if (!/^sha256-[a-f0-9]{16}$/.test(deploymentSignature || '')) {
+    throw new Error('La firma de despliegue del overlay no es válida.');
+  }
+  const signaturePlaceholder = '__CLUSS_DEPLOYMENT_SIGNATURE__';
+  const mainOverlayHtml = fs.readFileSync(mainOverlayPath, 'utf8');
+  if (!mainOverlayHtml.includes(signaturePlaceholder)) {
+    throw new Error('Falta el marcador de firma de despliegue en overlay.html.');
+  }
   app.get(['/', '/overlay', '/tortugas.html', '/tortugas_tiktok.html', '/v2.0.html'], (request, response) => {
     response.setHeader('Cache-Control', 'no-store, max-age=0');
-    response.sendFile(mainOverlayPath);
+    response.type('html').send(mainOverlayHtml.replace(signaturePlaceholder, deploymentSignature));
   });
 
   app.get('/api/activity-policy.js', (request, response) => {
